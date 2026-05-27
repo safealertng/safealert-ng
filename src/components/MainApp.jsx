@@ -317,8 +317,23 @@ const agoraVideoRef = useRef(null);
         <MicroLabel>UPLOAD EVIDENCE</MicroLabel>
         <div style={{ display:"flex", gap:8 }}>
           {["📹 Live Video","📸 Photo","🎤 Voice"].map(b => (
-            <button key={b} onClick={b.startsWith("📹") ? () => { setReportStage("live"); startBroadcast(); } : undefined} style={S.evBtn}>{b}</button>
+            <button key={b} onClick={
+              b.startsWith("📹") ? () => { setReportStage("live"); startBroadcast(); } :
+              b.startsWith("📸") ? () => { document.getElementById("photo-upload").click(); } :
+              b.startsWith("🎤") ? () => { alert("🎤 Voice recording coming soon!"); } :
+              undefined
+            } style={S.evBtn}>{b}</button>
           ))}
+          <input id="photo-upload" type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={(e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                alert("📸 Photo captured! Upload feature coming in next update.");
+              };
+              reader.readAsDataURL(file);
+            }
+          }} />
         </div>
       </div>
       <button onClick={async () => {
