@@ -133,9 +133,7 @@ const agoraVideoRef = useRef(null);
       await client.publish([audioTrack, videoTrack]);
       setStream(true);
       setTimeout(() => {
-        if (agoraVideoRef.current) {
-          videoTrack.play(agoraVideoRef.current);
-        }
+        videoTrack.play("agora-video-container");
       }, 800);
     } catch (err) {
       console.error("Camera access denied:", err);
@@ -728,7 +726,7 @@ function VideoBox({ pct, time, label, fmt, stream, videoRef }) {
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
-      <div ref={videoRef} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
+      <div id="agora-video-container" style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
       {!stream && <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>}
       <div style={S.recTag}>● REC {fmt(time)}</div>
       <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace", zIndex:3 }}>
