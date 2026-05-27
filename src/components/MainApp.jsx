@@ -136,7 +136,7 @@ const agoraVideoRef = useRef(null);
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       client.setClientRole("host");
       agoraClientRef.current = client;
-      await client.join("41eb94be47f5488ea60fbb524cec8334", "safealert-panic", null, null);
+      await client.join("41eb94be47f5488ea60fbb524cec8334", "safealert-panic", "007eJxTYFhR1X95kdvdPRMdm9Q+qV7mzdTZbXNoh+icZxo8fDmZNgcVGEwMU5MsTZJSTczTTE0sLFITzQzSkpJMjUySU5MtjI1NGFjFsxoCGRlyYllZGRkgEMTnZyhOTEtNzEktKtEtSMzLTGZgAABu7yFf", null);
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       const videoTrack = await AgoraRTC.createCameraVideoTrack();
       localAudioTrackRef.current = audioTrack;
