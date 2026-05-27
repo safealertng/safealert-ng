@@ -120,6 +120,31 @@ export default function MainApp({ session }) {
   const videoRef = useRef(null);
 const agoraVideoRef = useRef(null);
 
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks = [];
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const fileName = `voice-${Date.now()}.webm`;
+        const { error } = await supabase.storage
+          .from("incident-audio")
+          .upload(fileName, blob, { contentType: "audio/webm" });
+        if (error) throw error;
+        alert("🎤 Voice recording uploaded successfully!");
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      setTimeout(() => mediaRecorder.stop(), 10000);
+      alert("🎤 Recording started! Will stop automatically after 10 seconds.");
+    } catch (err) {
+      console.error("Voice error:", err);
+      alert("🎤 Voice recording failed: " + err.message);
+    }
+  };
+
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -320,7 +345,7 @@ const agoraVideoRef = useRef(null);
             <button key={b} onClick={
               b.startsWith("📹") ? () => { setReportStage("live"); startBroadcast(); } :
               b.startsWith("📸") ? () => { document.getElementById("photo-upload").click(); } :
-              b.startsWith("🎤") ? () => { alert("🎤 Voice recording coming soon!"); } :
+              b.startsWith("🎤") ? () => { startVoiceRecording(); } :
               undefined
             } style={S.evBtn}>{b}</button>
           ))}
