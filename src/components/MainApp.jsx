@@ -339,7 +339,7 @@ const agoraVideoRef = useRef(null);
                   alert("📸 Photo uploaded successfully!");
                 } catch (err) {
                   console.error("Upload error:", err);
-                  alert("📸 Photo captured! Will be uploaded when storage is set up.");
+                  alert("Upload error: " + err.message);
                 }
               };
               reader.readAsDataURL(file);
