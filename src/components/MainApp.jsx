@@ -139,7 +139,13 @@ const agoraVideoRef = useRef(null);
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       client.setClientRole("host");
       agoraClientRef.current = client;
-      await client.join("41eb94be47f5488ea60fbb524cec8334", "safealert-panic", "007eJxTYFhR1X95kdvdPRMdm9Q+qV7mzdTZbXNoh+icZxo8fDmZNgcVGEwMU5MsTZJSTczTTE0sLFITzQzSkpJMjUySU5MtjI1NGFjFsxoCGRlyYllZGRkgEMTnZyhOTEtNzEktKtEtSMzLTGZgAABu7yFf", null);
+      const tokenRes = await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/agora-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr" },
+        body: JSON.stringify({ channelName: "safealert-panic", uid: 0 })
+      });
+      const tokenData = await tokenRes.json();
+      await client.join("41eb94be47f5488ea60fbb524cec8334", "safealert-panic", tokenData.token, null);
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       const videoTrack = await AgoraRTC.createCameraVideoTrack();
       localAudioTrackRef.current = audioTrack;
@@ -271,7 +277,7 @@ const agoraVideoRef = useRef(null);
   if (nav === "report" && reportStage === "live") return (
     <Shell shakeFlash={false}>
       <TopBar title="LIVE REPORT" onBack={endBroadcast} />
-      <VideoBox pct={uploadPct} videoRef={videoRef} stream={stream} time={recordTime} label={`📹 ${selectedIncident?.label || "Recording..."}`} fmt={fmt} />
+      <VideoBox pct={uploadPct} stream={stream} time={recordTime} label={`📹 ${selectedIncident?.label || "Recording..."}`} fmt={fmt} />
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="REPORT SUBMITTED" sub="Authorities & community watch notified" />}
       <div style={{ ...S.card, margin:"12px 16px" }}>
