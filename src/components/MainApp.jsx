@@ -118,6 +118,7 @@ export default function MainApp({ session }) {
   const [panicStage, setPanicStage] = useState("idle");
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
+const agoraVideoRef = useRef(null);
 
   const startCamera = async () => {
     try {
@@ -130,7 +131,7 @@ export default function MainApp({ session }) {
       localAudioTrackRef.current = audioTrack;
       localVideoTrackRef.current = videoTrack;
       await client.publish([audioTrack, videoTrack]);
-      videoTrack.play(videoRef.current);
+      videoTrack.play(agoraVideoRef.current);
       setStream(true);
     } catch (err) {
       console.error("Camera access denied:", err);
@@ -238,7 +239,7 @@ export default function MainApp({ session }) {
   if (panicStage === "active") return (
     <Shell shakeFlash={false}>
       <div style={S.liveBar}><Blink /><span style={{ color:"#FF2D2D", fontWeight:900, letterSpacing:3, fontSize:12 }}>LIVE BROADCAST</span><span style={{ marginLeft:"auto", fontFamily:"monospace", color:"#555", fontSize:11 }}>{fmt(recordTime)}</span></div>
-      <VideoBox pct={uploadPct} videoRef={videoRef} stream={stream} time={recordTime} label="📹 Broadcasting to authorities..." fmt={fmt} />
+      <VideoBox pct={uploadPct} videoRef={agoraVideoRef} stream={stream} time={recordTime} label="📹 Broadcasting to authorities..." fmt={fmt} />
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
       <Section label="FAMILY MEMBERS ALERTED">
