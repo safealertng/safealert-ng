@@ -95,17 +95,21 @@ export default function MainApp({ session }) {
           setUserCoords({ lat: latitude, lng: longitude });
           try {
             const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
+              { headers: { "User-Agent": "SafeAlertNG/1.0" } }
             );
             const data = await res.json();
-            const city = data.address.city || data.address.town || data.address.village || "";
-            const state = data.address.state || "";
-            setUserLocation(`${city}, ${state}`);
+            const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
+            const state = data.address.state || data.address.region || "";
+            setUserLocation(city && state ? `${city}, ${state}` : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
           } catch {
             setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
           }
         },
-        () => setUserLocation("Location unavailable"),
+        () => (err) => {
+          console.error("GPS error:", err);
+          setUserLocation("Location unavailable");
+        },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
@@ -117,13 +121,16 @@ export default function MainApp({ session }) {
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: { facingMode: "user" },
         audio: true
       });
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.play();
+        }
+      }, 500);
     } catch (err) {
       console.error("Camera access denied:", err);
     }
@@ -170,7 +177,7 @@ export default function MainApp({ session }) {
     let p = 0;
     upRef.current = setInterval(() => {
       p += Math.random() * 12;
-      if (p >= 100) { p = 100; clearInterval(upRef.current); setDispatched(true); }
+      if (p >= 100) { p = 100; clearInterval(upRef.current); setTimeout(() => setDispatched(true), 3000); }
       setUploadPct(Math.min(Math.round(p), 100));
     }, 350);
   };
