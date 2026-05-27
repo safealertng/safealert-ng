@@ -122,8 +122,8 @@ const agoraVideoRef = useRef(null);
 
   const startVoiceRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(voiceStream);
       const chunks = [];
       mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
       mediaRecorder.onstop = async () => {
@@ -132,13 +132,27 @@ const agoraVideoRef = useRef(null);
         const { error } = await supabase.storage
           .from("incident-audio")
           .upload(fileName, blob, { contentType: "audio/webm" });
-        if (error) throw error;
-        alert("🎤 Voice recording uploaded successfully!");
-        stream.getTracks().forEach(t => t.stop());
+        voiceStream.getTracks().forEach(t => t.stop());
+        if (error) {
+          alert("🎤 Upload failed: " + error.message);
+        } else {
+          alert("🎤 Voice recording uploaded successfully!");
+        }
       };
       mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), 10000);
-      alert("🎤 Recording started! Will stop automatically after 10 seconds.");
+      setVoiceRecording(true);
+      setVoiceTime(0);
+      voiceRecorderRef.current = mediaRecorder;
+      voiceTimerRef.current = setInterval(() => {
+        setVoiceTime(t => {
+          if (t >= 299) {
+            mediaRecorder.stop();
+            setVoiceRecording(false);
+            clearInterval(voiceTimerRef.current);
+          }
+          return t + 1;
+        });
+      }, 1000);
     } catch (err) {
       console.error("Voice error:", err);
       alert("🎤 Voice recording failed: " + err.message);
@@ -193,6 +207,8 @@ const agoraVideoRef = useRef(null);
   const [uploadPct, setUploadPct] = useState(0);
   const [dispatched, setDispatched] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const [voiceTime, setVoiceTime] = useState(0);
   const [reportStage, setReportStage] = useState("form");
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
@@ -208,6 +224,8 @@ const agoraVideoRef = useRef(null);
   const agoraClientRef = useRef(null);
   const localAudioTrackRef = useRef(null);
   const localVideoTrackRef = useRef(null);
+  const voiceRecorderRef = useRef(null);
+  const voiceTimerRef = useRef(null);
 
   useEffect(() => {
     if (panicStage === "countdown" && panicCount > 0) countRef.current = setTimeout(() => setPanicCount(c => c - 1), 1000);
@@ -340,12 +358,19 @@ const agoraVideoRef = useRef(null);
       </div>
       <div style={{ padding:"12px 16px 0" }}>
         <MicroLabel>UPLOAD EVIDENCE</MicroLabel>
+        {voiceRecording && (
+          <div style={{ background:"#FF2D2D11", border:"1px solid #FF2D2D33", borderRadius:10, padding:"10px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:10, height:10, borderRadius:"50%", background:"#FF2D2D", animation:"blink 0.9s ease-in-out infinite" }} />
+            <span style={{ color:"#FF2D2D", fontWeight:700, fontSize:13 }}>RECORDING {fmt(voiceTime)}</span>
+            <span style={{ color:"#555", fontSize:11, marginLeft:"auto" }}>Max 5:00 · Tap 🎤 to stop</span>
+          </div>
+        )}
         <div style={{ display:"flex", gap:8 }}>
           {["📹 Live Video","📸 Photo","🎤 Voice"].map(b => (
             <button key={b} onClick={
               b.startsWith("📹") ? () => { setReportStage("live"); startBroadcast(); } :
               b.startsWith("📸") ? () => { document.getElementById("photo-upload").click(); } :
-              b.startsWith("🎤") ? () => { startVoiceRecording(); } :
+              b.startsWith("🎤") ? () => { voiceRecording ? (voiceRecorderRef.current?.stop(), setVoiceRecording(false), clearInterval(voiceTimerRef.current)) : startVoiceRecording(); } :
               undefined
             } style={S.evBtn}>{b}</button>
           ))}
