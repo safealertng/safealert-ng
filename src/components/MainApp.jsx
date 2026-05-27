@@ -133,6 +133,10 @@ const agoraVideoRef = useRef(null);
           videoRef.current.play();
         }
       }, 500);
+    } catch (err) {
+      console.error("Camera access denied:", err);
+    }
+    try {
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       client.setClientRole("host");
       agoraClientRef.current = client;
@@ -143,7 +147,7 @@ const agoraVideoRef = useRef(null);
       localVideoTrackRef.current = videoTrack;
       await client.publish([audioTrack, videoTrack]);
     } catch (err) {
-      console.error("Camera access denied:", err);
+      console.error("Agora streaming error:", err);
     }
   };
 
@@ -734,7 +738,7 @@ function VideoBox({ pct, time, label, fmt, stream, videoRef }) {
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
-      <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1, transform:"scaleX(-1)" }} />
+      <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
       {!stream && <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>}
       <div style={S.recTag}>● REC {fmt(time)}</div>
       <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace", zIndex:3 }}>
