@@ -124,7 +124,7 @@ const agoraVideoRef = useRef(null);
     const { data, error } = await supabase
       .from("family_members")
       .select("*")
-      .eq("user_id", session?.user?.id);
+      .eq("owner_id", session?.user?.id);
     if (!error && data) setRealFamily(data);
   };
 
@@ -133,8 +133,8 @@ const agoraVideoRef = useRef(null);
     const { error } = await supabase
       .from("family_members")
       .insert({
-        user_id: session?.user?.id,
-        name: newName,
+        owner_id: session?.user?.id,
+        nickname: newName,
         phone: newPhone,
         relation: newRelation,
       });
