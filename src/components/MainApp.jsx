@@ -734,11 +734,18 @@ function TopBar({ title, onBack }) {
   );
 }
 
-function VideoBox({ pct, time, label, fmt, stream, videoRef }) {
+function VideoBox({ pct, time, label, fmt, stream }) {
+  const localRef = useRef(null);
+  useEffect(() => {
+    if (localRef.current && stream) {
+      localRef.current.srcObject = stream;
+      localRef.current.play().catch(e => console.error(e));
+    }
+  }, [stream]);
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
-      <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
+      <video ref={localRef} autoPlay playsInline muted style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
       {!stream && <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>}
       <div style={S.recTag}>● REC {fmt(time)}</div>
       <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace", zIndex:3 }}>
