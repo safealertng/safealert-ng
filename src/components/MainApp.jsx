@@ -123,7 +123,7 @@ const agoraVideoRef = useRef(null);
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: { facingMode: "user" },
         audio: true
       });
       setStream(mediaStream);
