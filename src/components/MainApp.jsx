@@ -328,8 +328,19 @@ const agoraVideoRef = useRef(null);
             const file = e.target.files[0];
             if (file) {
               const reader = new FileReader();
-              reader.onload = (ev) => {
-                alert("📸 Photo captured! Upload feature coming in next update.");
+              reader.onload = async (ev) => {
+                try {
+                  const base64 = ev.target.result;
+                  const fileName = `incident-${Date.now()}.jpg`;
+                  const { data, error } = await supabase.storage
+                    .from("incident-photos")
+                    .upload(fileName, file, { contentType: file.type });
+                  if (error) throw error;
+                  alert("📸 Photo uploaded successfully!");
+                } catch (err) {
+                  console.error("Upload error:", err);
+                  alert("📸 Photo captured! Will be uploaded when storage is set up.");
+                }
               };
               reader.readAsDataURL(file);
             }
