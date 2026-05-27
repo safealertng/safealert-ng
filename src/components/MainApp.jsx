@@ -122,6 +122,17 @@ const agoraVideoRef = useRef(null);
 
   const startCamera = async () => {
     try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: true
+      });
+      setStream(mediaStream);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.play();
+        }
+      }, 500);
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       client.setClientRole("host");
       agoraClientRef.current = client;
@@ -131,10 +142,6 @@ const agoraVideoRef = useRef(null);
       localAudioTrackRef.current = audioTrack;
       localVideoTrackRef.current = videoTrack;
       await client.publish([audioTrack, videoTrack]);
-      setStream(true);
-      setTimeout(() => {
-        videoTrack.play("agora-video-container");
-      }, 800);
     } catch (err) {
       console.error("Camera access denied:", err);
     }
@@ -144,6 +151,7 @@ const agoraVideoRef = useRef(null);
     if (localAudioTrackRef.current) { localAudioTrackRef.current.stop(); localAudioTrackRef.current.close(); }
     if (localVideoTrackRef.current) { localVideoTrackRef.current.stop(); localVideoTrackRef.current.close(); }
     if (agoraClientRef.current) agoraClientRef.current.leave();
+    if (stream) { stream.getTracks().forEach(t => t.stop()); }
     setStream(null);
   };
   const [panicCount, setPanicCount] = useState(5);
