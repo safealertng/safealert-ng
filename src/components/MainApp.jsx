@@ -171,7 +171,17 @@ export default function MainApp({ session }) {
     return () => clearTimeout(t);
   }, []);
 
-  const startBroadcast = () => {
+  const startBroadcast = async () => {
+    try {
+      await supabase.from("panic_events").insert({
+        user_id: session?.user?.id,
+        lat: userCoords?.lat || 0,
+        lng: userCoords?.lng || 0,
+        state: userLocation || "Unknown",
+        police_notified: true,
+        resolved: false
+      });
+    } catch(e) { console.error("Failed to save panic event:", e); }
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     let p = 0;
@@ -287,7 +297,21 @@ export default function MainApp({ session }) {
           ))}
         </div>
       </div>
-      <button onClick={() => { setReportStage("live"); startBroadcast(); }} disabled={!selectedIncident}
+      <button onClick={async () => {
+          setReportStage("live");
+          startBroadcast();
+          try {
+            await supabase.from("incidents").insert({
+              reporter_id: session?.user?.id,
+              type: selectedIncident?.id,
+              description: "",
+              lat: userCoords?.lat || 0,
+              lng: userCoords?.lng || 0,
+              state: userLocation || "Unknown",
+              status: "active"
+            });
+          } catch(e) { console.error("Failed to save incident:", e); }
+        }} disabled={!selectedIncident}
         style={{ ...S.redBtn, margin:"16px", opacity: selectedIncident ? 1 : 0.35 }}>
         🚨 SUBMIT REPORT NOW
       </button>
@@ -363,18 +387,7 @@ export default function MainApp({ session }) {
   if (nav === "alerts") return (
     <Shell shakeFlash={false}>
       <TopBar title="COMMUNITY ALERTS" onBack={() => setNav("home")} />
-      <div style={{ padding:"12px 16px" }}>
-        {NEARBY_ALERTS.map(a => (
-          <div key={a.id} style={{ ...S.card, marginBottom:10 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontWeight:800 }}>{a.type}</span>
-              <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:a.active?"#FF2D2D18":"#00FF8818", color:a.active?"#FF2D2D":"#00FF88", border:`1px solid ${a.active?"#FF2D2D44":"#00FF8844"}` }}>{a.active?"ACTIVE":"RESOLVED"}</span>
-            </div>
-            <div style={{ color:"#555", fontSize:12, marginTop:5 }}>📍 {a.location}</div>
-            <div style={{ color:"#444", fontSize:11, marginTop:3 }}>{a.time}</div>
-          </div>
-        ))}
-      </div>
+      <LiveAlertsScreen session={session} />
     </Shell>
   );
 
@@ -1204,6 +1217,81 @@ const cS = {
   ghostBtn: { width:"100%", background:"transparent", border:"1px solid #222", borderRadius:10, padding:"13px", color:"#555", fontSize:13, fontWeight:700, letterSpacing:2, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", marginTop:8, display:"block" },
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE ALERTS SCREEN — pulls real incidents from Supabase
+// ─────────────────────────────────────────────────────────────────────────────
+function LiveAlertsScreen({ session }) {
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      const { data, error } = await supabase
+        .from("incidents")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (!error && data) setIncidents(data);
+      setLoading(false);
+    };
+    fetchIncidents();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel("incidents-feed")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
+        (payload) => setIncidents(prev => [payload.new, ...prev])
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  const TYPE_LABELS = { kidnapping:"Kidnapping", armed_robbery:"Armed Robbery", suspicious_activity:"Suspicious Activity", physical_attack:"Physical Attack", suspicious_vehicle:"Suspicious Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
+
+  if (loading) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40 }}>
+      <div style={{ width:32, height:32, border:"3px solid #FF2D2D22", borderTop:"3px solid #FF2D2D", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ padding:"12px 16px" }}>
+      {incidents.length === 0 ? (
+        <div>
+          <div style={{ textAlign:"center", padding:30, color:"#444" }}>
+            <div style={{ fontSize:32 }}>📡</div>
+            <div style={{ marginTop:10, fontSize:13 }}>No incidents reported yet</div>
+            <div style={{ fontSize:11, color:"#333", marginTop:6 }}>Be the first to report — your report will appear here in real time</div>
+          </div>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>SAMPLE ALERTS</div>
+          {NEARBY_ALERTS.map(a => (
+            <div key={a.id} style={{ background:"#0a0a0a", border:`1px solid ${a.active?"#FF2D2D22":"#161616"}`, borderRadius:12, marginBottom:10, padding:"12px 14px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:800 }}>{a.type}</span>
+                <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:a.active?"#FF2D2D18":"#00FF8818", color:a.active?"#FF2D2D":"#00FF88", border:`1px solid ${a.active?"#FF2D2D44":"#00FF8844"}` }}>{a.active?"ACTIVE":"RESOLVED"}</span>
+              </div>
+              <div style={{ color:"#555", fontSize:12, marginTop:5 }}>📍 {a.location}</div>
+              <div style={{ color:"#444", fontSize:11, marginTop:3 }}>{a.time}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        incidents.map(inc => (
+          <div key={inc.id} style={{ background:"#0a0a0a", border:"1px solid #FF2D2D22", borderRadius:12, marginBottom:10, padding:"12px 14px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:800 }}>{TYPE_LABELS[inc.type] || inc.type}</span>
+              <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:inc.status==="active"?"#FF2D2D18":"#00FF8818", color:inc.status==="active"?"#FF2D2D":"#00FF88", border:`1px solid ${inc.status==="active"?"#FF2D2D44":"#00FF8844"}` }}>{inc.status?.toUpperCase()}</span>
+            </div>
+            <div style={{ color:"#555", fontSize:12, marginTop:5 }}>📍 {inc.state}</div>
+            <div style={{ color:"#444", fontSize:11, marginTop:3 }}>{new Date(inc.created_at).toLocaleString("en-NG")}</div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHECKPOINT TRACKER
