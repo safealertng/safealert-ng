@@ -1499,7 +1499,7 @@ function LiveAlertsScreen({ session }) {
                     <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                       <div style={{ width:36, height:36, borderRadius:8, background:col+"18", border:`1px solid ${col}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{icon}</div>
                       <div>
-                        <div style={{ fontWeight:800, fontSize:13, color:"#ddd" }}>{TYPE_LABELS[inc.type] || inc.type}</div>
+                        <div style={{ fontWeight:800, fontSize:13, color:"#ddd" }}>{TYPE_LABELS[inc.type] || TYPE_LABELS[inc.type?.toLowerCase().replace(/ /g, "_")] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
                         <div style={{ color:"#555", fontSize:11, marginTop:2 }}>📍 {inc.state}</div>
                       </div>
                     </div>
