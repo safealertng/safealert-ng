@@ -124,7 +124,7 @@ const agoraVideoRef = useRef(null);
     const { data, error } = await supabase
       .from("family_members")
       .select("*")
-      .eq("owner_id", session?.user?.id);
+      .eq("user_id", session?.user?.id);
     if (!error && data) setRealFamily(data);
   };
 
@@ -1377,6 +1377,19 @@ const cS = {
 function LiveAlertsScreen({ session }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterState, setFilterState] = useState("all");
+  const [newAlert, setNewAlert] = useState(false);
+  const [userCoords, setUserCoords] = useState(null);
+
+  const TYPE_LABELS = { kidnapping:"Kidnapping", robbery:"Armed Robbery", suspicious:"Suspicious Activity", attack:"Physical Attack", vehicle:"Suspect Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
+  const TYPE_ICONS = { kidnapping:"🚨", robbery:"🔫", suspicious:"👁️", attack:"⚠️", vehicle:"🚗", banditry:"🏕️", terrorism:"💣", other:"📢" };
+  const TYPE_COLORS = { kidnapping:"#FF2D2D", robbery:"#FF6B00", suspicious:"#FFB800", attack:"#FF4500", vehicle:"#9B59B6", banditry:"#E74C3C", terrorism:"#FF2D2D", other:"#555" };
+
+  useEffect(() => {
+    navigator.geolocation?.getCurrentPosition(p => setUserCoords({ lat: p.coords.latitude, lng: p.coords.longitude }));
+  }, []);
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -1384,24 +1397,50 @@ function LiveAlertsScreen({ session }) {
         .from("incidents")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
       if (!error && data) setIncidents(data);
       setLoading(false);
     };
     fetchIncidents();
-
-    // Realtime subscription
     const channel = supabase
       .channel("incidents-feed")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
-        (payload) => setIncidents(prev => [payload.new, ...prev])
+        (payload) => { setIncidents(prev => [payload.new, ...prev]); setNewAlert(true); setTimeout(() => setNewAlert(false), 5000); }
       )
       .subscribe();
-
     return () => supabase.removeChannel(channel);
   }, []);
 
-  const TYPE_LABELS = { kidnapping:"Kidnapping", armed_robbery:"Armed Robbery", suspicious_activity:"Suspicious Activity", physical_attack:"Physical Attack", suspicious_vehicle:"Suspicious Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
+  const getDistance = (lat1, lng1, lat2, lng2) => {
+    if (!lat1 || !lat2) return null;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+    return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+  };
+
+  const markResolved = async (id) => {
+    await supabase.from("incidents").update({ status: "resolved" }).eq("id", id);
+    setIncidents(prev => prev.map(inc => inc.id === id ? { ...inc, status: "resolved" } : inc));
+  };
+
+  const allIncidents = [...incidents, ...NEARBY_ALERTS.map(a => ({
+    id: `sample-${a.id}`, type: a.type.toLowerCase().replace(" ", "_"),
+    state: a.location, status: a.active ? "active" : "resolved",
+    created_at: new Date(Date.now() - parseInt(a.time) * 60000).toISOString(),
+    lat: null, lng: null, description: ""
+  }))];
+
+  const filtered = allIncidents.filter(inc => {
+    const matchSearch = search === "" || (inc.type?.toLowerCase().includes(search.toLowerCase()) || inc.state?.toLowerCase().includes(search.toLowerCase()));
+    const matchType = filterType === "all" || inc.type === filterType;
+    const matchState = filterState === "all" || inc.state?.toLowerCase().includes(filterState.toLowerCase());
+    return matchSearch && matchType && matchState;
+  });
+
+  const activeCount = filtered.filter(i => i.status === "active").length;
+  const resolvedCount = filtered.filter(i => i.status === "resolved").length;
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:40 }}>
@@ -1410,38 +1449,76 @@ function LiveAlertsScreen({ session }) {
   );
 
   return (
-    <div style={{ padding:"12px 16px" }}>
-      {incidents.length === 0 ? (
-        <div>
-          <div style={{ textAlign:"center", padding:30, color:"#444" }}>
-            <div style={{ fontSize:32 }}>📡</div>
-            <div style={{ marginTop:10, fontSize:13 }}>No incidents reported yet</div>
-            <div style={{ fontSize:11, color:"#333", marginTop:6 }}>Be the first to report — your report will appear here in real time</div>
-          </div>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>SAMPLE ALERTS</div>
-          {NEARBY_ALERTS.map(a => (
-            <div key={a.id} style={{ background:"#0a0a0a", border:`1px solid ${a.active?"#FF2D2D22":"#161616"}`, borderRadius:12, marginBottom:10, padding:"12px 14px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontWeight:800 }}>{a.type}</span>
-                <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:a.active?"#FF2D2D18":"#00FF8818", color:a.active?"#FF2D2D":"#00FF88", border:`1px solid ${a.active?"#FF2D2D44":"#00FF8844"}` }}>{a.active?"ACTIVE":"RESOLVED"}</span>
-              </div>
-              <div style={{ color:"#555", fontSize:12, marginTop:5 }}>📍 {a.location}</div>
-              <div style={{ color:"#444", fontSize:11, marginTop:3 }}>{a.time}</div>
-            </div>
-          ))}
+    <div style={{ paddingBottom:24 }}>
+      {newAlert && (
+        <div style={{ background:"#FF2D2D", padding:"8px 16px", display:"flex", alignItems:"center", gap:8, animation:"slideDown 0.3s ease" }}>
+          <div style={{ width:8, height:8, borderRadius:"50%", background:"#fff", animation:"blink 0.8s infinite" }} />
+          <span style={{ color:"#fff", fontWeight:900, fontSize:12, letterSpacing:1 }}>NEW ALERT INCOMING</span>
         </div>
-      ) : (
-        incidents.map(inc => (
-          <div key={inc.id} style={{ background:"#0a0a0a", border:"1px solid #FF2D2D22", borderRadius:12, marginBottom:10, padding:"12px 14px" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontWeight:800 }}>{TYPE_LABELS[inc.type] || inc.type}</span>
-              <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:inc.status==="active"?"#FF2D2D18":"#00FF8818", color:inc.status==="active"?"#FF2D2D":"#00FF88", border:`1px solid ${inc.status==="active"?"#FF2D2D44":"#00FF8844"}` }}>{inc.status?.toUpperCase()}</span>
-            </div>
-            <div style={{ color:"#555", fontSize:12, marginTop:5 }}>📍 {inc.state}</div>
-            <div style={{ color:"#444", fontSize:11, marginTop:3 }}>{new Date(inc.created_at).toLocaleString("en-NG")}</div>
-          </div>
-        ))
       )}
+      <div style={{ display:"flex", gap:8, padding:"12px 16px 0" }}>
+        {[[activeCount,"Active","#FF2D2D"],[resolvedCount,"Resolved","#00FF88"],[filtered.length,"Total","#FFB800"]].map(([n,l,c]) => (
+          <div key={l} style={{ flex:1, background:"#0d0d0d", border:`1px solid ${c}22`, borderRadius:10, padding:"10px 6px", textAlign:"center" }}>
+            <div style={{ fontSize:22, fontWeight:900, color:c }}>{n}</div>
+            <div style={{ fontSize:9, color:"#444", fontFamily:"monospace", marginTop:1 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ margin:"12px 16px 0", background:"#0d0d0d", border:"1px solid #1a1a1a", borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:8 }}>
+        <span style={{ color:"#444" }}>🔍</span>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by type or location..." style={{ flex:1, background:"none", border:"none", color:"#ccc", fontSize:13, outline:"none", fontFamily:"'Barlow Condensed',sans-serif" }} />
+        {search && <button onClick={() => setSearch("")} style={{ background:"none", border:"none", color:"#444", cursor:"pointer" }}>✕</button>}
+      </div>
+      <div style={{ display:"flex", gap:6, padding:"10px 16px 0", overflowX:"auto" }}>
+        {[["all","All"],["kidnapping","🚨 Kidnap"],["robbery","🔫 Robbery"],["suspicious","👁️ Suspicious"],["attack","⚠️ Attack"],["banditry","🏕️ Banditry"],["terrorism","💣 Terror"]].map(([v,l]) => (
+          <button key={v} onClick={() => setFilterType(v)} style={{ flexShrink:0, borderRadius:20, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", background:filterType===v?"#FF2D2D22":"#0d0d0d", color:filterType===v?"#FF2D2D":"#555", border:`1px solid ${filterType===v?"#FF2D2D55":"#1a1a1a"}` }}>{l}</button>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:6, padding:"8px 16px 0", overflowX:"auto" }}>
+        {["all","Lagos","Abuja","Rivers","Kaduna","Kano","Borno","Zamfara"].map(v => (
+          <button key={v} onClick={() => setFilterState(v)} style={{ flexShrink:0, borderRadius:20, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", background:filterState===v?"#FFB80022":"#0d0d0d", color:filterState===v?"#FFB800":"#555", border:`1px solid ${filterState===v?"#FFB80055":"#1a1a1a"}` }}>{v === "all" ? "🗺️ All States" : v}</button>
+        ))}
+      </div>
+      <div style={{ padding:"10px 16px 0" }}>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign:"center", padding:40, color:"#333" }}>
+            <div style={{ fontSize:32 }}>📡</div>
+            <div style={{ marginTop:10 }}>No alerts match your filters</div>
+          </div>
+        ) : (
+          filtered.map(inc => {
+            const dist = getDistance(userCoords?.lat, userCoords?.lng, inc.lat, inc.lng);
+            const col = TYPE_COLORS[inc.type] || "#555";
+            const icon = TYPE_ICONS[inc.type] || "📢";
+            const isActive = inc.status === "active";
+            return (
+              <div key={inc.id} style={{ background:"#0a0a0a", border:`1px solid ${isActive?"#FF2D2D22":"#161616"}`, borderRadius:12, marginBottom:10, overflow:"hidden" }}>
+                {isActive && <div style={{ height:2, background:`linear-gradient(90deg,#FF2D2D,#FF6B00)` }} />}
+                <div style={{ padding:"12px 14px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                    <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                      <div style={{ width:36, height:36, borderRadius:8, background:col+"18", border:`1px solid ${col}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{icon}</div>
+                      <div>
+                        <div style={{ fontWeight:800, fontSize:13, color:"#ddd" }}>{TYPE_LABELS[inc.type] || inc.type}</div>
+                        <div style={{ color:"#555", fontSize:11, marginTop:2 }}>📍 {inc.state}</div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize:9, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:isActive?"#FF2D2D18":"#00FF8818", color:isActive?"#FF2D2D":"#00FF88", border:`1px solid ${isActive?"#FF2D2D44":"#00FF8844"}`, flexShrink:0 }}>{inc.status?.toUpperCase()}</span>
+                  </div>
+                  <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+                    <span style={{ fontSize:10, color:"#444" }}>🕐 {new Date(inc.created_at).toLocaleString("en-NG")}</span>
+                    {dist && <span style={{ fontSize:10, color:"#FFB800", fontWeight:700 }}>📏 {dist} km away</span>}
+                    {inc.description && <span style={{ fontSize:10, color:"#555" }}>{inc.description}</span>}
+                  </div>
+                  {isActive && !inc.id?.toString().startsWith("sample") && (
+                    <button onClick={() => markResolved(inc.id)} style={{ marginTop:10, background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:6, padding:"5px 12px", fontSize:11, color:"#00FF88", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>✓ Mark Resolved</button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
