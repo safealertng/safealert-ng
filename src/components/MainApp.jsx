@@ -136,7 +136,7 @@ const agoraVideoRef = useRef(null);
       const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
       client.setClientRole("host");
       agoraClientRef.current = client;
-      await client.join(APP_ID, "safealert-panic", null, null);
+      await client.join("41eb94be47f5488ea60fbb524cec8334", "safealert-panic", null, null);
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       const videoTrack = await AgoraRTC.createCameraVideoTrack();
       localAudioTrackRef.current = audioTrack;
@@ -734,7 +734,7 @@ function VideoBox({ pct, time, label, fmt, stream, videoRef }) {
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
-      <div id="agora-video-container" style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
+      <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1, transform:"scaleX(-1)" }} />
       {!stream && <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>}
       <div style={S.recTag}>● REC {fmt(time)}</div>
       <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace", zIndex:3 }}>
