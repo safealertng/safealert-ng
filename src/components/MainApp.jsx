@@ -362,7 +362,7 @@ const agoraVideoRef = useRef(null);
           <div style={{ background:"#FF2D2D11", border:"1px solid #FF2D2D33", borderRadius:10, padding:"10px 14px", marginBottom:8, display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:10, height:10, borderRadius:"50%", background:"#FF2D2D", animation:"blink 0.9s ease-in-out infinite" }} />
             <span style={{ color:"#FF2D2D", fontWeight:700, fontSize:13 }}>RECORDING {fmt(voiceTime)}</span>
-            <span style={{ color:"#555", fontSize:11, marginLeft:"auto" }}>Max 5:00 · Tap 🎤 to stop</span>
+            <button onClick={() => { voiceRecorderRef.current?.stop(); setVoiceRecording(false); clearInterval(voiceTimerRef.current); }} style={{ marginLeft:"auto", background:"#FF2D2D", border:"none", borderRadius:6, padding:"5px 12px", color:"#fff", fontWeight:700, fontSize:11, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>■ STOP</button>
           </div>
         )}
         <div style={{ display:"flex", gap:8 }}>
