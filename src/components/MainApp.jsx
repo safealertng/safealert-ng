@@ -1383,9 +1383,9 @@ function LiveAlertsScreen({ session }) {
   const [newAlert, setNewAlert] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
 
-  const TYPE_LABELS = { kidnapping:"Kidnapping", robbery:"Armed Robbery", suspicious:"Suspicious Activity", attack:"Physical Attack", vehicle:"Suspect Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
-  const TYPE_ICONS = { kidnapping:"🚨", robbery:"🔫", suspicious:"👁️", attack:"⚠️", vehicle:"🚗", banditry:"🏕️", terrorism:"💣", other:"📢" };
-  const TYPE_COLORS = { kidnapping:"#FF2D2D", robbery:"#FF6B00", suspicious:"#FFB800", attack:"#FF4500", vehicle:"#9B59B6", banditry:"#E74C3C", terrorism:"#FF2D2D", other:"#555" };
+  const TYPE_LABELS = { kidnapping:"Kidnapping", kidnapping_attempt:"Kidnapping Attempt", robbery:"Armed Robbery", armed_robbery:"Armed Robbery", suspicious:"Suspicious Activity", suspicious_activity:"Suspicious Activity", suspicious_vehicle:"Suspicious Vehicle", attack:"Physical Attack", physical_attack:"Physical Attack", vehicle:"Suspect Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
+  const TYPE_ICONS = { kidnapping:"🚨", kidnapping_attempt:"🚨", robbery:"🔫", armed_robbery:"🔫", suspicious:"👁️", suspicious_activity:"👁️", suspicious_vehicle:"🚗", attack:"⚠️", physical_attack:"⚠️", vehicle:"🚗", banditry:"🏕️", terrorism:"💣", other:"📢" };
+  const TYPE_COLORS = { kidnapping:"#FF2D2D", kidnapping_attempt:"#FF2D2D", robbery:"#FF6B00", armed_robbery:"#FF6B00", suspicious:"#FFB800", suspicious_activity:"#FFB800", suspicious_vehicle:"#9B59B6", attack:"#FF4500", physical_attack:"#FF4500", vehicle:"#9B59B6", banditry:"#E74C3C", terrorism:"#FF2D2D", other:"#555" };
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(p => setUserCoords({ lat: p.coords.latitude, lng: p.coords.longitude }));
@@ -1426,7 +1426,7 @@ function LiveAlertsScreen({ session }) {
   };
 
   const allIncidents = [...incidents, ...NEARBY_ALERTS.map(a => ({
-    id: `sample-${a.id}`, type: a.type.toLowerCase().replace(" ", "_"),
+    id: `sample-${a.id}`, type: a.type.toLowerCase().replace(/ /g, "_"),
     state: a.location, status: a.active ? "active" : "resolved",
     created_at: new Date(Date.now() - parseInt(a.time) * 60000).toISOString(),
     lat: null, lng: null, description: ""
