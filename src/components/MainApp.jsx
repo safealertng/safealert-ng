@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../lib/supabase";
+import AgoraRTC, { APP_ID } from "../lib/agora";
 
 const NIGERIAN_STATES_LIST = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
@@ -120,27 +121,27 @@ export default function MainApp({ session }) {
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: true
-      });
-      setStream(mediaStream);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.play();
-        }
-      }, 500);
+      const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+      client.setClientRole("host");
+      agoraClientRef.current = client;
+      await client.join(APP_ID, "safealert-panic", null, null);
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      const videoTrack = await AgoraRTC.createCameraVideoTrack();
+      localAudioTrackRef.current = audioTrack;
+      localVideoTrackRef.current = videoTrack;
+      await client.publish([audioTrack, videoTrack]);
+      videoTrack.play(videoRef.current);
+      setStream(true);
     } catch (err) {
       console.error("Camera access denied:", err);
     }
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
+    if (localAudioTrackRef.current) { localAudioTrackRef.current.stop(); localAudioTrackRef.current.close(); }
+    if (localVideoTrackRef.current) { localVideoTrackRef.current.stop(); localVideoTrackRef.current.close(); }
+    if (agoraClientRef.current) agoraClientRef.current.leave();
+    setStream(null);
   };
   const [panicCount, setPanicCount] = useState(5);
   const [recordTime, setRecordTime] = useState(0);
@@ -159,6 +160,9 @@ export default function MainApp({ session }) {
   const countRef = useRef(null);
   const recRef = useRef(null);
   const upRef = useRef(null);
+  const agoraClientRef = useRef(null);
+  const localAudioTrackRef = useRef(null);
+  const localVideoTrackRef = useRef(null);
 
   useEffect(() => {
     if (panicStage === "countdown" && panicCount > 0) countRef.current = setTimeout(() => setPanicCount(c => c - 1), 1000);
@@ -715,18 +719,11 @@ function TopBar({ title, onBack }) {
   );
 }
 
-function VideoBox({ pct, time, label, fmt, stream }) {
-  const localVideoRef = useRef(null);
-  useEffect(() => {
-    if (localVideoRef.current && stream) {
-      localVideoRef.current.srcObject = stream;
-      localVideoRef.current.play().catch(e => console.error(e));
-    }
-  }, [stream]);
+function VideoBox({ pct, time, label, fmt, stream, videoRef }) {
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
-      <video ref={localVideoRef} autoPlay playsInline style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
+      <div ref={videoRef} style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
       {!stream && <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>}
       <div style={S.recTag}>● REC {fmt(time)}</div>
       <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace", zIndex:3 }}>
