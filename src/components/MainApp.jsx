@@ -702,13 +702,21 @@ function TopBar({ title, onBack }) {
   );
 }
 
-function VideoBox({ pct, time, label, fmt, videoRef, stream }) {
+function VideoBox({ pct, time, label, fmt, stream }) {
+  const localVideoRef = useRef(null);
+  useEffect(() => {
+    if (localVideoRef.current && stream) {
+      localVideoRef.current.srcObject = stream;
+      localVideoRef.current.play().catch(e => console.error(e));
+    }
+  }, [stream]);
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
-      <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>
+      <video ref={localVideoRef} autoPlay playsInline style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0, display:stream?"block":"none", zIndex:1 }} />
+      {!stream && <div style={{ color:"#333", fontSize:12, position:"relative", zIndex:2 }}>{label}</div>}
       <div style={S.recTag}>● REC {fmt(time)}</div>
-      <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace" }}>
+      <div style={{ position:"absolute", bottom:9, left:9, right:9, display:"flex", justifyContent:"space-between", fontSize:10, fontFamily:"monospace", zIndex:3 }}>
         <span style={{ color:"#00FF88" }}>↑ {pct}%</span>
         <span style={{ color:"#FFB800" }}>3 Responders</span>
       </div>
