@@ -131,8 +131,12 @@ const agoraVideoRef = useRef(null);
       localAudioTrackRef.current = audioTrack;
       localVideoTrackRef.current = videoTrack;
       await client.publish([audioTrack, videoTrack]);
-      videoTrack.play(agoraVideoRef.current);
       setStream(true);
+      setTimeout(() => {
+        if (agoraVideoRef.current) {
+          videoTrack.play(agoraVideoRef.current);
+        }
+      }, 800);
     } catch (err) {
       console.error("Camera access denied:", err);
     }
