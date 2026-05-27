@@ -83,8 +83,58 @@ const ZONE_COLORS = { "North West":"#4A90D9","North East":"#E67E22","North Centr
 // ROOT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MainApp({ session }) {
-  const [nav, setNav] = useState("home"); // home|report|family|alerts|contacts|convoy|ransom|tipline
+  const [nav, setNav] = useState("home");
+  const [userLocation, setUserLocation] = useState("{userLocation}");
+  const [userCoords, setUserCoords] = useState(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserCoords({ lat: latitude, lng: longitude });
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+            );
+            const data = await res.json();
+            const city = data.address.city || data.address.town || data.address.village || "";
+            const state = data.address.state || "";
+            setUserLocation(`${city}, ${state}`);
+          } catch {
+            setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          }
+        },
+        () => setUserLocation("Location unavailable"),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
   const [panicStage, setPanicStage] = useState("idle");
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: true
+      });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error("Camera access denied:", err);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
   const [panicCount, setPanicCount] = useState(5);
   const [recordTime, setRecordTime] = useState(0);
   const [uploadPct, setUploadPct] = useState(0);
@@ -115,6 +165,7 @@ export default function MainApp({ session }) {
   }, []);
 
   const startBroadcast = () => {
+    startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     let p = 0;
     upRef.current = setInterval(() => {
@@ -127,6 +178,7 @@ export default function MainApp({ session }) {
   const cancelPanic = () => { setPanicStage("idle"); setPanicCount(5); clearTimeout(countRef.current); };
 
   const endBroadcast = () => {
+    stopCamera();
     setPanicStage("idle"); setPanicCount(5);
     setRecordTime(0); setUploadPct(0); setDispatched(false);
     clearInterval(recRef.current); clearInterval(upRef.current);
@@ -154,7 +206,7 @@ export default function MainApp({ session }) {
           <div style={S.countNum}>{panicCount}</div>
           <div style={S.countLabel}>SENDING EMERGENCY ALERT</div>
           <div style={S.countSub}>Police · Family · Emergency contacts</div>
-          <div style={S.countLoc}>📍 Wuse 2, Abuja FCT</div>
+          <div style={S.countLoc}>📍 {userLocation}</div>
           <button style={S.cancelBig} onClick={cancelPanic}>✕  CANCEL</button>
         </div>
       </div>
@@ -165,7 +217,7 @@ export default function MainApp({ session }) {
   if (panicStage === "active") return (
     <Shell shakeFlash={false}>
       <div style={S.liveBar}><Blink /><span style={{ color:"#FF2D2D", fontWeight:900, letterSpacing:3, fontSize:12 }}>LIVE BROADCAST</span><span style={{ marginLeft:"auto", fontFamily:"monospace", color:"#555", fontSize:11 }}>{fmt(recordTime)}</span></div>
-      <VideoBox pct={uploadPct} time={recordTime} label="📹 Broadcasting to authorities..." fmt={fmt} />
+      <VideoBox pct={uploadPct} videoRef={videoRef} stream={stream} time={recordTime} label="📹 Broadcasting to authorities..." fmt={fmt} />
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
       <Section label="FAMILY MEMBERS ALERTED">
@@ -184,7 +236,7 @@ export default function MainApp({ session }) {
   if (nav === "report" && reportStage === "live") return (
     <Shell shakeFlash={false}>
       <TopBar title="LIVE REPORT" onBack={endBroadcast} />
-      <VideoBox pct={uploadPct} time={recordTime} label={`📹 ${selectedIncident?.label || "Recording..."}`} fmt={fmt} />
+      <VideoBox pct={uploadPct} videoRef={videoRef} stream={stream} time={recordTime} label={`📹 ${selectedIncident?.label || "Recording..."}`} fmt={fmt} />
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="REPORT SUBMITTED" sub="Authorities & community watch notified" />}
       <div style={{ ...S.card, margin:"12px 16px" }}>
@@ -214,7 +266,7 @@ export default function MainApp({ session }) {
       </div>
       <div style={{ padding:"12px 16px 0" }}>
         <MicroLabel>YOUR LOCATION</MicroLabel>
-        <div style={S.locBox}>📍 <span style={{ flex:1, color:"#ccc", fontSize:13 }}>Wuse 2, Abuja FCT</span><span style={{ color:"#00FF88", fontSize:10, fontWeight:700 }}>LIVE</span></div>
+        <div style={S.locBox}>📍 <span style={{ flex:1, color:"#ccc", fontSize:13 }}>{userLocation}</span><span style={{ color:"#00FF88", fontSize:10, fontWeight:700 }}>LIVE</span></div>
       </div>
       <div style={{ padding:"12px 16px 0" }}>
         <MicroLabel>DESCRIPTION (OPTIONAL)</MicroLabel>
@@ -643,7 +695,7 @@ function TopBar({ title, onBack }) {
   );
 }
 
-function VideoBox({ pct, time, label, fmt }) {
+function VideoBox({ pct, time, label, fmt, videoRef, stream }) {
   return (
     <div style={S.videoBox}>
       <div style={S.scanlines} />
