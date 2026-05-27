@@ -120,6 +120,38 @@ export default function MainApp({ session }) {
   const videoRef = useRef(null);
 const agoraVideoRef = useRef(null);
 
+  const fetchFamily = async () => {
+    const { data, error } = await supabase
+      .from("family_members")
+      .select("*")
+      .eq("user_id", session?.user?.id);
+    if (!error && data) setRealFamily(data);
+  };
+
+  const addFamilyMember = async () => {
+    if (!newName || !newPhone || !newRelation) return;
+    const { error } = await supabase
+      .from("family_members")
+      .insert({
+        user_id: session?.user?.id,
+        name: newName,
+        phone: newPhone,
+        relation: newRelation,
+      });
+    if (!error) {
+      setNewName(""); setNewPhone(""); setNewRelation("");
+      setAddingMember(false);
+      fetchFamily();
+    } else {
+      alert("Error adding member: " + error.message);
+    }
+  };
+
+  const deleteFamilyMember = async (id) => {
+    await supabase.from("family_members").delete().eq("id", id);
+    fetchFamily();
+  };
+
   const startVoiceRecording = async () => {
     try {
       const voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -209,6 +241,11 @@ const agoraVideoRef = useRef(null);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [voiceTime, setVoiceTime] = useState(0);
+  const [realFamily, setRealFamily] = useState([]);
+  const [addingMember, setAddingMember] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newRelation, setNewRelation] = useState("");
   const [reportStage, setReportStage] = useState("form");
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
@@ -237,6 +274,10 @@ const agoraVideoRef = useRef(null);
     const t = setTimeout(() => { setShakeFlash(true); setTimeout(() => setShakeFlash(false), 4500); }, 3000);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) fetchFamily();
+  }, [session]);
 
   const startBroadcast = async () => {
     try {
@@ -421,7 +462,19 @@ const agoraVideoRef = useRef(null);
   // ── FAMILY ───────────────────────────────────────────────────────────────
   if (nav === "family") return (
     <Shell shakeFlash={false}>
-      <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); }} />
+      <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
+      {addingMember && (
+        <div style={{ margin:"12px 16px", background:"#0d0d0d", border:"1px solid #1e1e1e", borderRadius:12, padding:14 }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>ADD FAMILY MEMBER</div>
+          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Full name" style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }} />
+          <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Phone number e.g. 08012345678" style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }} />
+          <input value={newRelation} onChange={e => setNewRelation(e.target.value)} placeholder="Relation e.g. Mother, Brother" style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }} />
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={addFamilyMember} style={{ flex:1, background:"linear-gradient(135deg,#FF2D2D,#990000)", border:"none", borderRadius:8, padding:"11px", color:"#fff", fontSize:13, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>ADD MEMBER</button>
+            <button onClick={() => setAddingMember(false)} style={{ flex:1, background:"#111", border:"1px solid #222", borderRadius:8, padding:"11px", color:"#555", fontSize:13, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>CANCEL</button>
+          </div>
+        </div>
+      )}
       {selectedMember ? (
         <div style={{ padding:"0 16px 24px" }}>
           <button style={{ ...S.backLnk, margin:"12px 0" }} onClick={() => setSelectedMember(null)}>← All Members</button>
@@ -449,7 +502,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {FAMILY_MEMBERS.map(m => (
+          {[...realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone})), ...FAMILY_MEMBERS].map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
@@ -703,7 +756,7 @@ const agoraVideoRef = useRef(null);
             <div style={{ fontSize:9, color:"#555", marginTop:3, maxWidth:50, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.name.split(" ")[0]}</div>
           </button>
         ))}
-        <button onClick={() => setNav("family")} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
+        <button onClick={() => { setNav("family"); setAddingMember(true); }} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
           <div style={{ width:34, height:34, borderRadius:"50%", background:"#0f0f0f", border:"1px dashed #2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, color:"#333" }}>+</div>
           <div style={{ fontSize:9, color:"#333", marginTop:3 }}>Add</div>
         </button>
