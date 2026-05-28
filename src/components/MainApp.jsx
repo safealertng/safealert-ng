@@ -1375,7 +1375,8 @@ function TipLineScreen() {
     } catch(err) {
       clearInterval(iv);
       setSending(false);
-      alert("Failed to send tip: " + err.message);
+      console.error("EmailJS error:", JSON.stringify(err));
+      alert("Failed to send tip: " + JSON.stringify(err));
     }
   };
 
