@@ -953,6 +953,9 @@ function ConvoyScreen() {
   const [convoyStarted, setConvoyStarted] = useState(false);
   const [destination, setDestination] = useState("");
   const [route, setRoute] = useState("");
+  const [vehicleType, setVehicleType] = useState("");
+  const [vehicleColor, setVehicleColor] = useState("");
+  const [plateNumber, setPlateNumber] = useState("");
   const [alertSent, setAlertSent] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const mapRef = useRef(null);
@@ -980,7 +983,7 @@ function ConvoyScreen() {
 
       // Add convoy member markers
       const members = [
-        { name:"You", lat: center[0], lng: center[1], color:"#00FF88" },
+        { name:"You", lat: center[0], lng: center[1], color:"#00FF88", vehicle: vehicleType || "Vehicle", plate: plateNumber || "---" },
         { name:"Alhaji Musa", lat: center[0] + 0.02, lng: center[1] + 0.01, color:"#FFB800" },
         { name:"Mrs Okafor", lat: center[0] + 0.04, lng: center[1] + 0.02, color:"#FFB800" },
         { name:"Emeka Trucks", lat: center[0] - 0.02, lng: center[1] - 0.01, color:"#FF2D2D" },
@@ -1068,6 +1071,26 @@ function ConvoyScreen() {
             <div style={{ marginBottom:10 }}>
               <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>DESTINATION</label>
               <input value={destination} onChange={e=>setDestination(e.target.value)} placeholder="e.g. Abuja, FCT" style={cS.inp} />
+            </div>
+            <div style={{ marginBottom:10 }}>
+              <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>VEHICLE TYPE</label>
+              <select value={vehicleType} onChange={e=>setVehicleType(e.target.value)} style={cS.inp}>
+                <option value="">Select vehicle type...</option>
+                <option value="Sedan">🚗 Sedan</option>
+                <option value="SUV">🚙 SUV</option>
+                <option value="Bus">🚌 Bus</option>
+                <option value="Truck">🚛 Truck</option>
+                <option value="Pickup">🛻 Pickup</option>
+                <option value="Motorcycle">🏍️ Motorcycle</option>
+              </select>
+            </div>
+            <div style={{ marginBottom:10 }}>
+              <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>VEHICLE COLOR</label>
+              <input value={vehicleColor} onChange={e=>setVehicleColor(e.target.value)} placeholder="e.g. Black, White, Red" style={cS.inp} />
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>PLATE NUMBER</label>
+              <input value={plateNumber} onChange={e=>setPlateNumber(e.target.value)} placeholder="e.g. ABJ 234 EF" style={{ ...cS.inp, textTransform:"uppercase" }} />
             </div>
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>ROUTE / HIGHWAY</label>
