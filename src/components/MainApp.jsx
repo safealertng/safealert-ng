@@ -1515,7 +1515,50 @@ const cS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // LIVE ALERTS SCREEN — pulls real incidents from Supabase
 // ─────────────────────────────────────────────────────────────────────────────
-function LiveAlertsScreen({ session }) {
+function ProfileScreen({ session, onBack }) {
+  const [fullName, setFullName] = useState(session?.user?.user_metadata?.full_name || "");
+  const [phone, setPhone] = useState(session?.user?.user_metadata?.phone || "");
+  const [state, setState] = useState(session?.user?.user_metadata?.state || "");
+  const [lga, setLga] = useState(session?.user?.user_metadata?.lga || "");
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({
+      data: { full_name: fullName, phone, state, lga }
+    });
+    setSaving(false);
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } else {
+      alert("Error saving profile: " + error.message);
+    }
+  };
+
+  const signOut = async () => {
+    setSigningOut(true);
+    await supabase.auth.signOut();
+  };
+
+  return (
+    <div style={{ padding:"16px 16px 40px" }}>
+      {/* Avatar */}
+      <div style={{ textAlign:"center", marginBottom:24 }}>
+        <div style={{ width:80, height:80, borderRadius:"50%", background:"#111", border:"2px solid #00FF8844", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, margin:"0 auto 10px" }}>👤</div>
+        <div style={{ color:"#00FF88", fontSize:11, fontWeight:700, letterSpacing:1 }}>✓ VERIFIED ACCOUNT</div>
+        <div style={{ color:"#555", fontSize:11, marginTop:4 }}>{session?.user?.email}</div>
+      </div>
+
+      {/* Form */}
+      <div style={{ ...cS.card, marginBottom:12 }}>
+        <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:12, fontFamily:"monospace" }}>PERSONAL INFORMATION</div>
+        
+        <div style={{ marginBottom:10 }}>
+          <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>FULL NAME</label>
+          <input value={fullName} onChange={e => setFullName(e.t({ session }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
