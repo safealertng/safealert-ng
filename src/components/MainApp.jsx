@@ -1905,12 +1905,24 @@ function NewsScreen() {
 
   useEffect(() => {
     const fetchNews = async () => {
+      // Fetch from Supabase database
       const { data, error } = await supabase
         .from("security_news")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(30);
       if (!error && data) setLiveNews(data);
+
+      // Fetch from NewsAPI via Edge Function
+      try {
+        const res = await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/fetch-news", {
+          headers: { "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr" }
+        });
+        const newsData = await res.json();
+        if (newsData.articles) {
+          setLiveNews(prev => [...prev, ...newsData.articles]);
+        }
+      } catch(e) { console.error("News API error:", e); }
     };
     fetchNews();
     const channel = supabase
