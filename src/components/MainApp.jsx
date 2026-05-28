@@ -1920,7 +1920,11 @@ function NewsScreen() {
         });
         const newsData = await res.json();
         if (newsData.articles) {
-          setLiveNews(prev => [...prev, ...newsData.articles]);
+          const formatted = newsData.articles.map(a => ({
+            ...a,
+            time: a.time ? new Date(a.time).toLocaleString("en-NG") : "Just now"
+          }));
+          setLiveNews(prev => [...prev, ...formatted]);
         }
       } catch(e) { console.error("News API error:", e); }
     };
