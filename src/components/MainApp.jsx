@@ -1518,47 +1518,70 @@ const cS = {
 function ProfileScreen({ session, onBack }) {
   const [fullName, setFullName] = useState(session?.user?.user_metadata?.full_name || "");
   const [phone, setPhone] = useState(session?.user?.user_metadata?.phone || "");
-  const [state, setState] = useState(session?.user?.user_metadata?.state || "");
-  const [lga, setLga] = useState(session?.user?.user_metadata?.lga || "");
+  const [userState, setUserState] = useState(session?.user?.user_metadata?.state || "");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const saveProfile = async () => {
     setSaving(true);
     const { error } = await supabase.auth.updateUser({
-      data: { full_name: fullName, phone, state, lga }
+      data: { full_name: fullName, phone, state: userState }
     });
     setSaving(false);
-    if (!error) {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } else {
-      alert("Error saving profile: " + error.message);
-    }
+    if (!error) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
+    else alert("Error: " + error.message);
   };
 
-  const signOut = async () => {
-    setSigningOut(true);
-    await supabase.auth.signOut();
-  };
+  const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
     <div style={{ padding:"16px 16px 40px" }}>
-      {/* Avatar */}
       <div style={{ textAlign:"center", marginBottom:24 }}>
         <div style={{ width:80, height:80, borderRadius:"50%", background:"#111", border:"2px solid #00FF8844", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, margin:"0 auto 10px" }}>👤</div>
         <div style={{ color:"#00FF88", fontSize:11, fontWeight:700, letterSpacing:1 }}>✓ VERIFIED ACCOUNT</div>
         <div style={{ color:"#555", fontSize:11, marginTop:4 }}>{session?.user?.email}</div>
       </div>
-
-      {/* Form */}
       <div style={{ ...cS.card, marginBottom:12 }}>
         <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:12, fontFamily:"monospace" }}>PERSONAL INFORMATION</div>
-        
         <div style={{ marginBottom:10 }}>
           <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>FULL NAME</label>
-          <input value={fullName} onChange={e => setFullName(e.t({ session }) {
+          <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Enter your full name" style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"10px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif" }} />
+        </div>
+        <div style={{ marginBottom:10 }}>
+          <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>PHONE NUMBER</label>
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. 08012345678" style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"10px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif" }} />
+        </div>
+        <div style={{ marginBottom:10 }}>
+          <label style={{ fontSize:9, color:"#555", letterSpacing:2, fontFamily:"monospace", display:"block", marginBottom:5 }}>STATE OF RESIDENCE</label>
+          <select value={userState} onChange={e => setUserState(e.target.value)} style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"10px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif" }}>
+            <option value="">Select state...</option>
+            {NIGERIAN_STATES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <button onClick={saveProfile} disabled={saving} style={{ width:"100%", background:"linear-gradient(135deg,#00FF88,#00aa55)", border:"none", borderRadius:8, padding:"12px", color:"#000", fontSize:14, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", marginTop:8 }}>
+          {saving ? "SAVING..." : saved ? "✓ SAVED!" : "SAVE PROFILE"}
+        </button>
+      </div>
+      <div style={{ ...cS.card, marginBottom:12 }}>
+        <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:12, fontFamily:"monospace" }}>ACCOUNT INFORMATION</div>
+        {[["Email", session?.user?.email],["Account Created", new Date(session?.user?.created_at).toLocaleDateString("en-NG")],["Status","✓ Verified"]].map(([l,v]) => (
+          <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid #111", fontSize:12 }}>
+            <span style={{ color:"#555" }}>{l}</span>
+            <span style={{ color:"#ccc", fontWeight:600 }}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <button onClick={signOut} style={{ width:"100%", background:"transparent", border:"1px solid #FF2D2D33", borderRadius:8, padding:"12px", color:"#FF2D2D", fontSize:14, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>
+        🚪 SIGN OUT
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIVE ALERTS SCREEN — pulls real incidents from Supabase
+// ─────────────────────────────────────────────────────────────────────────────
+function LiveAlertsScreen({ session }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -1635,7 +1658,7 @@ function ProfileScreen({ session, onBack }) {
   return (
     <div style={{ paddingBottom:24 }}>
       {newAlert && (
-        <div style={{ background:"#FF2D2D", padding:"8px 16px", display:"flex", alignItems:"center", gap:8, animation:"slideDown 0.3s ease" }}>
+        <div style={{ background:"#FF2D2D", padding:"8px 16px", display:"flex", alignItems:"center", gap:8 }}>
           <div style={{ width:8, height:8, borderRadius:"50%", background:"#fff", animation:"blink 0.8s infinite" }} />
           <span style={{ color:"#fff", fontWeight:900, fontSize:12, letterSpacing:1 }}>NEW ALERT INCOMING</span>
         </div>
@@ -1677,13 +1700,13 @@ function ProfileScreen({ session, onBack }) {
             const isActive = inc.status === "active";
             return (
               <div key={inc.id} style={{ background:"#0a0a0a", border:`1px solid ${isActive?"#FF2D2D22":"#161616"}`, borderRadius:12, marginBottom:10, overflow:"hidden" }}>
-                {isActive && <div style={{ height:2, background:`linear-gradient(90deg,#FF2D2D,#FF6B00)` }} />}
+                {isActive && <div style={{ height:2, background:"linear-gradient(90deg,#FF2D2D,#FF6B00)" }} />}
                 <div style={{ padding:"12px 14px" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
                     <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                       <div style={{ width:36, height:36, borderRadius:8, background:col+"18", border:`1px solid ${col}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{icon}</div>
                       <div>
-                        <div style={{ fontWeight:800, fontSize:13, color:"#ddd" }}>{TYPE_LABELS[inc.type] || TYPE_LABELS[inc.type?.toLowerCase().replace(/ /g, "_")] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
+                        <div style={{ fontWeight:800, fontSize:13, color:"#ddd" }}>{TYPE_LABELS[inc.type] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
                         <div style={{ color:"#555", fontSize:11, marginTop:2 }}>📍 {inc.state}</div>
                       </div>
                     </div>
@@ -1708,23 +1731,8 @@ function ProfileScreen({ session, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LIVE ALERTS SCREEN — pulls real incidents from Supabase
-// ─────────────────────────────────────────────────────────────────────────────
-function LiveAlertsScreen({ session }) {
-  const [incidents, setIncidents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [filterState, setFilterState] = useState("all");
-  const [newAlert, setNewAlert] = useState(false);
-  const [userCoords, setUserCoords] = useState(null);
-
-  const TYPE_LABELS = { kidnapping:"Kidnapping", kidnapping_attempt:"Kidnapping Attempt", robbery:"Armed Robbery", armed_robbery:"Armed Robbery", suspicious:"Suspicious Activity", suspicious_activity:"Suspicious Activity", suspicious_vehicle:"Suspicious Vehicle", attack:"Physical Attack", physical_attack:"Physical Attack", vehicle:"Suspect Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
-  const TYPE_ICONS = { kidnapping:"🚨", kidnapping_attempt:"🚨", robbery:"🔫", armed_robbery:"🔫", suspicious:"👁️", suspicious_activity:"👁️", suspicious_vehicle:"🚗", attack:"⚠️", physical_attack:"⚠️", vehicle:"🚗", banditry:"🏕️", terrorism:"💣", other:"📢" };
-  const TYPE_COLORS = { kidnapping:"#FF2D2D", kidnapping_attempt:"#FF2D2D", robbery:"#FF6B00",
-// ─────────────────────────────────────────────────────────────────────────────
-const CHECKPOINTS_DATA = [
-  { id:1, route:"Kaduna–Abuja Expressway", location:"Kachia Junction, km 28", type:"army", desc:"Nigerian Army — 3 soldiers, thorough check", reports:34, mins:12, direction:"Both", severity:"medium" },
+// CHECKPOINT TRACKER
+  const CHECKPOINTS_DATA = [
   { id:2, route:"Lagos–Ibadan Expressway", location:"Sagamu Interchange", type:"police", desc:"Highway Patrol — vehicle papers check", reports:89, mins:5, direction:"Northbound", severity:"low" },
   { id:3, route:"Abuja–Lokoja Highway", location:"Gwagwalada Bridge", type:"police", desc:"Police stop — slow moving, extortion reports", reports:22, mins:25, direction:"Both", severity:"high" },
   { id:4, route:"Enugu–Onitsha Expressway", location:"9th Mile Corner", type:"army", desc:"Army checkpoint — baggage inspection", reports:15, mins:18, direction:"Southbound", severity:"medium" },
