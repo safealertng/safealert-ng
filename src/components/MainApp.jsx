@@ -120,6 +120,7 @@ export default function MainApp({ session }) {
   const [panicStage, setPanicStage] = useState("idle");
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
+  const [nearbyAlerts, setNearbyAlerts] = useState([]);
 const agoraVideoRef = useRef(null);
 
   const fetchFamily = async () => {
@@ -280,6 +281,25 @@ const agoraVideoRef = useRef(null);
   useEffect(() => {
     if (session?.user?.id) fetchFamily();
   }, [session]);
+
+  useEffect(() => {
+    const fetchNearbyAlerts = async () => {
+      const { data, error } = await supabase
+        .from("incidents")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (!error && data) setNearbyAlerts(data);
+    };
+    fetchNearbyAlerts();
+    const channel = supabase
+      .channel("nearby-alerts")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
+        (payload) => setNearbyAlerts(prev => [payload.new, ...prev.slice(0,4)])
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
 
   const startBroadcast = async () => {
     try {
@@ -843,7 +863,15 @@ const agoraVideoRef = useRef(null);
           <MicroLabel>NEARBY ALERTS</MicroLabel>
           <button onClick={() => setNav("alerts")} style={{ background:"none", border:"none", color:"#FFB800", fontSize:11, cursor:"pointer", fontFamily:"'Barlow Condensed', sans-serif", fontWeight:700 }}>See All →</button>
         </div>
-        {NEARBY_ALERTS.slice(0,2).map(a => (
+        {nearbyAlerts.length > 0 ? nearbyAlerts.slice(0,2).map(a => (
+          <div key={a.id} style={{ display:"flex", gap:9, marginBottom:8, alignItems:"flex-start" }}>
+            <div style={{ width:7, height:7, borderRadius:"50%", background:a.status==="active"?"#FF2D2D":"#00FF88", marginTop:4, flexShrink:0, boxShadow:`0 0 5px ${a.status==="active"?"#FF2D2D":"#00FF88"}` }} />
+            <div>
+              <div style={{ color:"#ccc", fontSize:12, fontWeight:600 }}>{a.type?.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())}</div>
+              <div style={{ color:"#444", fontSize:11 }}>📍 {a.state} · {new Date(a.created_at).toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"})}</div>
+            </div>
+          </div>
+        )) : NEARBY_ALERTS.slice(0,2).map(a => (
           <div key={a.id} style={{ display:"flex", gap:9, marginBottom:8, alignItems:"flex-start" }}>
             <div style={{ width:7, height:7, borderRadius:"50%", background:a.active?"#FF2D2D":"#00FF88", marginTop:4, flexShrink:0, boxShadow:`0 0 5px ${a.active?"#FF2D2D":"#00FF88"}` }} />
             <div>
