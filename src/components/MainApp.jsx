@@ -1829,6 +1829,7 @@ function CheckpointScreen() {
                       <div style={{ display:"flex", gap:8, marginTop:8 }}>
                         <button onClick={e => e.stopPropagation()} style={{ flex:1, background:"#FFB80022", border:"1px solid #FFB80044", borderRadius:8, padding:"7px", fontSize:11, color:"#FFB800", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>✓ Still Active</button>
                         <button onClick={e => e.stopPropagation()} style={{ flex:1, background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:8, padding:"7px", fontSize:11, color:"#00FF88", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>✗ Cleared</button>
+                        <button onClick={e => { e.stopPropagation(); window.open(`https://wa.me/?text=🚧 CHECKPOINT ALERT via SafeAlert NG:\n\n📍 ${cp.location}\n🛣️ ${cp.route}\n⏱️ ~${cp.mins > 0 ? cp.mins+"min delay" : "No delay"}\n👥 ${cp.reports} reports\n↔️ ${cp.direction}\n\nℹ️ ${cp.desc}\n\nStay safe! 🇳🇬🛡️`); }} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:8, padding:"7px", fontSize:11, color:"#25D366", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📤 Share</button>
                       </div>
                     </div>
                   )}
