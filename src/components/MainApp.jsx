@@ -949,11 +949,62 @@ const DANGER_ROUTES = [
 ];
 
 function ConvoyScreen() {
-  const [convoyTab, setConvoyTab] = useState("active"); // active | join | routes
+  const [convoyTab, setConvoyTab] = useState("active");
   const [convoyStarted, setConvoyStarted] = useState(false);
   const [destination, setDestination] = useState("");
   const [route, setRoute] = useState("");
   const [alertSent, setAlertSent] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+
+  useEffect(() => {
+    navigator.geolocation?.watchPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => console.error(err),
+      { enableHighAccuracy: true }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (convoyTab === "active" && mapRef.current && !mapInstanceRef.current) {
+      const L = window.L;
+      if (!L) return;
+      const center = userLocation ? [userLocation.lat, userLocation.lng] : [9.0765, 7.3986];
+      const map = L.map(mapRef.current).setView(center, 10);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap"
+      }).addTo(map);
+      mapInstanceRef.current = map;
+
+      // Add convoy member markers
+      const members = [
+        { name:"You", lat: center[0], lng: center[1], color:"#00FF88" },
+        { name:"Alhaji Musa", lat: center[0] + 0.02, lng: center[1] + 0.01, color:"#FFB800" },
+        { name:"Mrs Okafor", lat: center[0] + 0.04, lng: center[1] + 0.02, color:"#FFB800" },
+        { name:"Emeka Trucks", lat: center[0] - 0.02, lng: center[1] - 0.01, color:"#FF2D2D" },
+      ];
+
+      members.forEach(m => {
+        const icon = L.divIcon({
+          html: `<div style="background:${m.color};width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px ${m.color}"></div>`,
+          iconSize: [12, 12], className: ""
+        });
+        const marker = L.marker([m.lat, m.lng], { icon })
+          .addTo(map)
+          .bindPopup(`<b>${m.name}</b>`);
+        markersRef.current.push(marker);
+      });
+    }
+    return () => {
+      if (mapInstanceRef.current && convoyTab !== "active") {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        markersRef.current = [];
+      }
+    };
+  }, [convoyTab, userLocation]);
 
   return (
     <div style={{ paddingBottom:24 }}>
@@ -980,15 +1031,8 @@ function ConvoyScreen() {
               </div>
               <div style={{ background:"#00FF8820", border:"1px solid #00FF8844", borderRadius:6, padding:"3px 10px", fontSize:10, fontWeight:700, color:"#00FF88" }}>● LIVE</div>
             </div>
-            {/* Simulated road */}
-            <div style={{ background:"#060606", borderRadius:10, padding:12, marginBottom:12, position:"relative", overflow:"hidden", height:60 }}>
-              <div style={{ position:"absolute", top:"50%", left:0, right:0, height:2, background:"#1a1a1a", transform:"translateY(-50%)" }} />
-              <div style={{ position:"absolute", top:"50%", left:0, right:0, height:2, backgroundImage:"repeating-linear-gradient(90deg,#2a2a2a 0,#2a2a2a 20px,transparent 20px,transparent 40px)", transform:"translateY(-50%)" }} />
-              {["5%","28%","50%","72%"].map((l,i)=>(
-                <div key={i} style={{ position:"absolute", top:"50%", left:l, transform:"translate(-50%,-50%)", fontSize:18 }}>{["👨🏿","👩🏾","👨🏾","😊"][i]}</div>
-              ))}
-              <div style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", fontSize:11, color:"#333" }}>ABUJA →</div>
-            </div>
+            {/* Real GPS Map */}
+            <div ref={mapRef} style={{ borderRadius:10, marginBottom:12, height:220, zIndex:1 }} />
             {CONVOY_MEMBERS.map(m=>(
               <div key={m.id} style={{ display:"flex", gap:10, alignItems:"center", padding:"8px 0", borderBottom:"1px solid #111" }}>
                 <span style={{ fontSize:22 }}>{m.avatar}</span>
