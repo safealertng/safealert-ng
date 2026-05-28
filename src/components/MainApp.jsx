@@ -2256,6 +2256,7 @@ function HeatMapScreen() {
                       <div style={{ background:"#111", borderRadius:6, padding:"4px 8px", fontSize:10, color:"#666" }}>Risk: {s.risk}/4</div>
                       <div style={{ background:"#111", borderRadius:6, padding:"4px 8px", fontSize:10, color:TREND_COL[s.trend] }}>Trend: {s.trend}</div>
                       <div style={{ background:"#111", borderRadius:6, padding:"4px 8px", fontSize:10, color:"#666" }}>{s.incidents} incidents/24hrs</div>
+                      <button onClick={e => { e.stopPropagation(); window.open(`https://wa.me/?text=🗺️ SAFETY ALERT via SafeAlert NG 🇳🇬\n\n📍 *${s.state}* — ${ZONE_FULL[s.zone]}\n⚠️ Risk Level: *${RISK_LABELS[s.risk]}* (${s.risk}/4)\n📊 ${s.incidents} incidents today\n📈 Trend: ${s.trend}\n\nStay safe! Download SafeAlert NG 🛡️`); }} style={{ background:"#25D36622", border:"1px solid #25D36644", borderRadius:6, padding:"4px 10px", fontSize:10, color:"#25D366", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📤 Share</button>
                     </div>
                   )}
                 </div>
