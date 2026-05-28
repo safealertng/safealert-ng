@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import AgoraRTC, { APP_ID } from "../lib/agora";
+import emailjs from "@emailjs/browser";
 
 const NIGERIAN_STATES_LIST = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
@@ -1340,19 +1341,41 @@ function TipLineScreen() {
 
   const AGENCIES = ["Nigeria Police Force (NPF)","Department of State Services (DSS)","Nigerian Army Intelligence","NSCDC","Economic & Financial Crimes Commission (EFCC)","NDLEA (Drug-related only)"];
 
-  const sendTip = () => {
+  const sendTip = async () => {
     if (!tipText.trim() || !tipType || !agency) return;
     setSending(true); setSendPct(0);
     let p = 0;
     const iv = setInterval(()=>{
       p += Math.random()*15+5;
-      if (p >= 100) {
-        p = 100; clearInterval(iv); setSending(false); setSent(true);
-        setTipRef("TIP-"+Math.random().toString(36).substr(2,8).toUpperCase());
-        setTipTab("sent");
-      }
+      if (p >= 100) { p = 100; clearInterval(iv); }
       setSendPct(Math.min(Math.round(p),100));
     }, 180);
+    try {
+      const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
+      await emailjs.send(
+        "safealert_service",
+        "jawcyp6",
+        {
+          category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
+          agency: agency,
+          state: tipState || "Not specified",
+          urgency: urgency || "Not specified",
+          tip_text: tipText,
+          time: new Date().toLocaleString("en-NG"),
+        },
+        "k2v8M51WNm1oiKGTBQz1i"
+      );
+      clearInterval(iv);
+      setSendPct(100);
+      setSending(false);
+      setSent(true);
+      setTipRef(ref);
+      setTipTab("sent");
+    } catch(err) {
+      clearInterval(iv);
+      setSending(false);
+      alert("Failed to send tip: " + err.message);
+    }
   };
 
   if (tipTab === "sent") return (
