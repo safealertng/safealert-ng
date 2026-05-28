@@ -1851,7 +1851,17 @@ function CheckpointScreen() {
           <div>
             <input value={myRoute} onChange={e => setMyRoute(e.target.value)} placeholder="Route / road name" style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }} />
             <textarea value={myReport} onChange={e => setMyReport(e.target.value)} placeholder="Describe the checkpoint — location, type, delay, any issues..." style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#ccc", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", height:70, resize:"none", outline:"none" }} />
-            <button onClick={() => { if (myRoute && myReport) setSubmitted(true); }} disabled={!myRoute || !myReport}
+            <button onClick={async () => { 
+            if (myRoute && myReport) {
+              try {
+                await supabase.from("checkpoint_reports").insert({
+                  route: myRoute,
+                  description: myReport,
+                });
+                setSubmitted(true);
+              } catch(e) { console.error(e); setSubmitted(true); }
+            }
+          }} disabled={!myRoute || !myReport}
               style={{ width:"100%", background:"linear-gradient(135deg,#FFB800,#aa7700)", border:"none", borderRadius:8, padding:"12px", color:"#000", fontSize:14, fontWeight:900, letterSpacing:1, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", marginTop:8, opacity: myRoute&&myReport?1:0.4 }}>
               SUBMIT CHECKPOINT REPORT
             </button>
