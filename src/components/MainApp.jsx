@@ -2096,6 +2096,59 @@ function HeatMapScreen() {
   const [hmFilter, setHmFilter] = useState("all");
   const [sortBy, setSortBy] = useState("risk");
   const [selectedState, setSelectedState] = useState(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+
+  const RISK_COLORS_MAP = { 1:"#00FF88", 2:"#FFB800", 3:"#FF6B00", 4:"#FF2D2D" };
+
+  useEffect(() => {
+    if (mapRef.current && !mapInstanceRef.current) {
+      import("leaflet").then(({ default: L }) => {
+        const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false })
+          .setView([9.0765, 7.3986], 5);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap"
+        }).addTo(map);
+        mapInstanceRef.current = map;
+
+        // Add state markers
+        const stateCoords = {
+          "Lagos": [6.5244, 3.3792], "Abuja FCT": [9.0765, 7.3986], "Kano": [12.0022, 8.5920],
+          "Kaduna": [10.5105, 7.4165], "Rivers": [4.8156, 7.0498], "Borno": [11.8333, 13.1500],
+          "Zamfara": [12.1221, 6.2236], "Katsina": [12.9889, 7.6006], "Sokoto": [13.0059, 5.2476],
+          "Anambra": [6.2107, 7.0673], "Imo": [5.5720, 7.0588], "Oyo": [7.3775, 3.9470],
+          "Delta": [5.5320, 5.8987], "Edo": [6.3350, 5.6037], "Plateau": [9.2182, 9.5179],
+          "Niger": [9.9309, 5.5983], "Benue": [7.7322, 8.5391], "Enugu": [6.4584, 7.5464],
+          "Kwara": [8.4966, 4.5421], "Kogi": [7.7337, 6.6906], "Ogun": [7.1600, 3.3500],
+          "Ondo": [7.2500, 5.2000], "Ekiti": [7.7190, 5.3110], "Osun": [7.5629, 4.5200],
+          "Cross River": [5.8702, 8.5988], "Akwa Ibom": [5.0527, 7.9337], "Bayelsa": [4.9267, 6.2676],
+          "Taraba": [7.9994, 10.7740], "Adamawa": [9.3265, 12.3984], "Gombe": [10.2904, 11.1671],
+          "Bauchi": [10.3158, 9.8442], "Yobe": [12.2939, 11.4390], "Jigawa": [12.2280, 9.5616],
+          "Kebbi": [11.4942, 4.2333], "Nasarawa": [8.5373, 8.3237], "Ebonyi": [6.2649, 8.0137],
+          "Abia": [5.4527, 7.5248],
+        };
+
+        STATES_RISK.forEach(s => {
+          const coords = stateCoords[s.state];
+          if (!coords) return;
+          const col = RISK_COLORS_MAP[s.risk];
+          const icon = L.divIcon({
+            html: `<div style="background:${col};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px ${col};opacity:0.9"></div>`,
+            iconSize: [14, 14], className: ""
+          });
+          L.marker(coords, { icon })
+            .addTo(map)
+            .bindPopup(`<b>${s.state}</b><br/>Risk: ${s.risk}/4<br/>Incidents: ${s.incidents}`);
+        });
+      });
+    }
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
   const RISK_COLORS = { 1:"#00FF88", 2:"#FFB800", 3:"#FF6B00", 4:"#FF2D2D" };
   const RISK_LABELS = { 1:"LOW", 2:"MODERATE", 3:"HIGH", 4:"CRITICAL" };
   const TREND_ICON = { rising:"↑", declining:"↓", stable:"→" };
@@ -2105,6 +2158,7 @@ function HeatMapScreen() {
   const counts = [1,2,3,4].reduce((acc,r) => ({ ...acc, [r]: STATES_RISK.filter(s=>s.risk===r).length }), {});
   return (
     <div style={{ paddingBottom:28 }}>
+      <div ref={mapRef} style={{ height:250, margin:"12px 16px 0", borderRadius:12, overflow:"hidden", zIndex:1 }} />
       <div style={{ background:"#FF2D2D11", border:"1px solid #FF2D2D22", borderRadius:10, margin:"12px 16px 0", padding:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
           <div style={{ fontWeight:900, fontSize:13, color:"#FF2D2D" }}>NATIONAL THREAT LEVEL: HIGH</div>
