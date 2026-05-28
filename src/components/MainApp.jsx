@@ -1363,8 +1363,8 @@ function TipLineScreen() {
           urgency: urgency || "Not specified",
           tip_text: tipText,
           time: new Date().toLocaleString("en-NG"),
-        },
-        "k2v8M51WNm1oiKGTBQz1i"
+          to_email: "lordfosterinc@gmail.com",
+        }
       );
       clearInterval(iv);
       setSendPct(100);
