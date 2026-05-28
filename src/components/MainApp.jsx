@@ -1253,7 +1253,10 @@ function RansomScreen() {
                 </div>
               </div>
               {a.verified && <div style={{ display:"inline-flex", gap:5, alignItems:"center", background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:6, padding:"3px 8px", fontSize:10, color:"#00FF88", marginBottom:10 }}><span>✓</span> Verified by SafeAlert NG</div>}
-              <button onClick={() => window.open(`tel:${a.contact.split("/")[0].trim()}`)} style={{ ...cS.redBtn, marginTop:0, fontSize:12 }}>📞 Call {a.contact}</button>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => window.open(`tel:${a.contact.split("/")[0].trim()}`)} style={{ ...cS.redBtn, flex:1, marginTop:0, fontSize:12 }}>📞 Call</button>
+                <button onClick={() => window.open(`https://wa.me/${a.contact.split("/")[0].trim().replace(/\D/g,"")}?text=Hello, I need urgent help with a kidnapping case. I am using SafeAlert NG.`)} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:10, padding:"14px", color:"#25D366", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", marginTop:0 }}>💬 WhatsApp</button>
+              </div>
             </div>
           ))}
           <div style={{ ...cS.card, background:"#FFB80008", border:"1px solid #FFB80022" }}>
