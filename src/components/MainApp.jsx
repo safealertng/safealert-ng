@@ -1521,6 +1521,28 @@ function ProfileScreen({ session, onBack }) {
   const [userState, setUserState] = useState(session?.user?.user_metadata?.state || "");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [avatar, setAvatar] = useState(session?.user?.user_metadata?.avatar_url || null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const uploadPhoto = async (file) => {
+    setUploadingPhoto(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${session?.user?.id}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      const avatarUrl = data.publicUrl;
+      await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
+      setAvatar(avatarUrl);
+      alert("✅ Photo updated successfully!");
+    } catch (err) {
+      alert("Error uploading photo: " + err.message);
+    }
+    setUploadingPhoto(false);
+  };
 
   const saveProfile = async () => {
     setSaving(true);
@@ -1537,7 +1559,14 @@ function ProfileScreen({ session, onBack }) {
   return (
     <div style={{ padding:"16px 16px 40px" }}>
       <div style={{ textAlign:"center", marginBottom:24 }}>
-        <div style={{ width:80, height:80, borderRadius:"50%", background:"#111", border:"2px solid #00FF8844", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, margin:"0 auto 10px" }}>👤</div>
+        <div style={{ position:"relative", width:80, height:80, margin:"0 auto 10px" }}>
+          {avatar ? <img src={avatar} alt="avatar" style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover", border:"2px solid #00FF8844" }} /> : <div style={{ width:80, height:80, borderRadius:"50%", background:"#111", border:"2px solid #00FF8844", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>👤</div>}
+          <label style={{ position:"absolute", bottom:0, right:0, width:26, height:26, borderRadius:"50%", background:"#00FF88", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:14 }}>
+            📷
+            <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => { if (e.target.files[0]) uploadPhoto(e.target.files[0]); }} />
+          </label>
+        </div>
+        {uploadingPhoto && <div style={{ color:"#00FF88", fontSize:11, marginBottom:6 }}>Uploading...</div>}
         <div style={{ color:"#00FF88", fontSize:11, fontWeight:700, letterSpacing:1 }}>✓ VERIFIED ACCOUNT</div>
         <div style={{ color:"#555", fontSize:11, marginTop:4 }}>{session?.user?.email}</div>
       </div>
