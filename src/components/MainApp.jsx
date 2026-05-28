@@ -1151,9 +1151,12 @@ function ConvoyScreen() {
 // RANSOM ALERT NETWORK COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const RECOVERY_AGENTS = [
-  { id:1, name:"Retired DSP Bello Abubakar", specialty:"North West Specialist", rating:"4.9", cases:47, verified:true, contact:"Abuja-based" },
-  { id:2, name:"ChiSecure Recovery Ltd", specialty:"South East & South South", rating:"4.7", cases:83, verified:true, contact:"Port Harcourt" },
-  { id:3, name:"Frontline Crisis Group", specialty:"Nationwide", rating:"4.8", cases:120, verified:true, contact:"Lagos/Abuja" },
+  { id:1, name:"IGP Anti-Kidnapping Unit", specialty:"Nigeria Police Force — Nationwide", rating:"★ Official", cases:null, verified:true, contact:"199 / 08032003913", icon:"🚔" },
+  { id:2, name:"DSS — Dept. of State Services", specialty:"Intelligence & Counter-Kidnapping", rating:"★ Official", cases:null, verified:true, contact:"08039003044", icon:"🛡️" },
+  { id:3, name:"Nigerian Army Intelligence", specialty:"Military Anti-Kidnapping Operations", rating:"★ Official", cases:null, verified:true, contact:"193 / 08028701718", icon:"⚔️" },
+  { id:4, name:"NSCDC Anti-Kidnapping Squad", specialty:"Civil Defence — Nationwide", rating:"★ Official", cases:null, verified:true, contact:"112 / 08061581938", icon:"🪖" },
+  { id:5, name:"Inspector General's Complaint", specialty:"Report Police Misconduct", rating:"★ Official", cases:null, verified:true, contact:"08057000001", icon:"⚖️" },
+  { id:6, name:"National Emergency Mgmt Agency", specialty:"NEMA — Disaster & Crisis Response", rating:"★ Official", cases:null, verified:true, contact:"08021872150", icon:"🆘" },
 ];
 
 function RansomScreen() {
@@ -1238,7 +1241,7 @@ function RansomScreen() {
           {RECOVERY_AGENTS.map(a=>(
             <div key={a.id} style={{ ...cS.card, marginBottom:10 }}>
               <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
-                <div style={{ width:44, height:44, borderRadius:10, background:"#111", border:"1px solid #2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>🛡️</div>
+                <div style={{ width:44, height:44, borderRadius:10, background:"#111", border:"1px solid #2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{a.icon || "🛡️"}</div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:800, fontSize:13 }}>{a.name}</div>
                   <div style={{ color:"#555", fontSize:11, marginTop:2 }}>{a.specialty}</div>
@@ -1250,7 +1253,7 @@ function RansomScreen() {
                 </div>
               </div>
               {a.verified && <div style={{ display:"inline-flex", gap:5, alignItems:"center", background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:6, padding:"3px 8px", fontSize:10, color:"#00FF88", marginBottom:10 }}><span>✓</span> Verified by SafeAlert NG</div>}
-              <button style={{ ...cS.redBtn, marginTop:0, fontSize:12 }}>📞 Contact This Agent</button>
+              <button onClick={() => window.open(`tel:${a.contact.split("/")[0].trim()}`)} style={{ ...cS.redBtn, marginTop:0, fontSize:12 }}>📞 Call {a.contact}</button>
             </div>
           ))}
           <div style={{ ...cS.card, background:"#FFB80008", border:"1px solid #FFB80022" }}>
