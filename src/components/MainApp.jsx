@@ -2100,6 +2100,25 @@ function HeatMapScreen() {
   const mapInstanceRef = useRef(null);
 
   const RISK_COLORS_MAP = { 1:"#00FF88", 2:"#FFB800", 3:"#FF6B00", 4:"#FF2D2D" };
+  const [liveRisk, setLiveRisk] = useState({});
+
+  useEffect(() => {
+    const fetchLiveIncidents = async () => {
+      const { data, error } = await supabase
+        .from("incidents")
+        .select("state, status")
+        .eq("status", "active");
+      if (!error && data) {
+        const riskMap = {};
+        data.forEach(inc => {
+          if (!riskMap[inc.state]) riskMap[inc.state] = 0;
+          riskMap[inc.state]++;
+        });
+        setLiveRisk(riskMap);
+      }
+    };
+    fetchLiveIncidents();
+  }, []);
 
   useEffect(() => {
     if (mapRef.current && !mapInstanceRef.current) {
