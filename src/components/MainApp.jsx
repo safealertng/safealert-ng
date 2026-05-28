@@ -1184,7 +1184,7 @@ function RansomScreen() {
       </div>
 
       <div style={{ display:"flex", gap:0, margin:"0 16px 14px", background:"#0d0d0d", borderRadius:10, border:"1px solid #1a1a1a", overflow:"hidden" }}>
-        {[["active","📋 Case Log"],["agents","🛡️ Agents"],["guide","📖 Guide"]].map(([t,l])=>(
+        {[["active","📋 Case Log"],["agents","🛡️ Agents"],["police","👮 Police"],["guide","📖 Guide"]].map(([t,l])=>(
           <button key={t} onClick={()=>setRansomTab(t)} style={{ flex:1, padding:"10px 4px", background:ransomTab===t?"#FF2D2D22":"transparent", color:ransomTab===t?"#FF2D2D":"#555", border:"none", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, borderBottom:ransomTab===t?"2px solid #FF2D2D":"2px solid transparent" }}>
             {l}
           </button>
@@ -1228,7 +1228,7 @@ function RansomScreen() {
               </div>
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={()=>setRansomTab("agents")} style={{ ...cS.redBtn, flex:1, marginTop:0, fontSize:12 }}>🛡️ Contact Agent</button>
-                <button style={{ ...cS.ghostBtn, flex:1, marginTop:0, fontSize:12 }}>👮 Call Police</button>
+                <button onClick={() => setRansomTab("police")} style={{ ...cS.ghostBtn, flex:1, marginTop:0, fontSize:12 }}>👮 Call Police</button>
               </div>
             </div>
           )}
@@ -1262,6 +1262,28 @@ function RansomScreen() {
           <div style={{ ...cS.card, background:"#FFB80008", border:"1px solid #FFB80022" }}>
             <div style={{ fontSize:11, color:"#666", lineHeight:1.7 }}>⚠ Always verify agent credentials independently. SafeAlert NG does not guarantee outcomes. Never pay ransom without professional guidance.</div>
           </div>
+        </div>
+      )}
+
+      {ransomTab === "police" && (
+        <div style={{ padding:"0 16px" }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>36 STATE POLICE COMMANDS</div>
+          {STATES.map(s => (
+            <div key={s.state} style={{ ...cS.card, marginBottom:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:13 }}>{s.state}</div>
+                  <div style={{ color:"#555", fontSize:11 }}>{s.police.commissioner}</div>
+                  <div style={{ color:"#FF2D2D", fontWeight:900, fontSize:14, fontFamily:"monospace", marginTop:4 }}>{s.police.number}</div>
+                </div>
+                <span style={{ fontSize:20 }}>🚔</span>
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => window.open(`tel:${s.police.number}`)} style={{ flex:1, background:"linear-gradient(135deg,#FF2D2D,#990000)", border:"none", borderRadius:8, padding:"10px", color:"#fff", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📞 Call</button>
+                <button onClick={() => window.open(`https://wa.me/${s.police.number.replace(/\D/g,"")}?text=Hello, I need urgent police assistance. I am using SafeAlert NG. There is a kidnapping emergency.`)} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:8, padding:"10px", color:"#25D366", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>💬 WhatsApp</button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
