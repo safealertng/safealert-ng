@@ -732,7 +732,15 @@ const agoraVideoRef = useRef(null);
     </Shell>
   );
 
-    // ── HOME ──────────────────────────────────────────────────────────────────
+    // ── PROFILE ──────────────────────────────────────────────────────────────
+  if (nav === "profile") return (
+    <Shell shakeFlash={false}>
+      <TopBar title="MY PROFILE" onBack={() => setNav("home")} />
+      <ProfileScreen session={session} onBack={() => setNav("home")} />
+    </Shell>
+  );
+
+  // ── HOME ──────────────────────────────────────────────────────────────────
   return (
     <Shell shakeFlash={shakeFlash}>
       <div style={S.header}>
@@ -742,7 +750,9 @@ const agoraVideoRef = useRef(null);
           <div style={{ fontSize:10, color:"#555", fontFamily:"monospace", marginTop:1 }}>📍 {session?.user?.user_metadata?.state || "Nigeria"}</div>
         </div>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-          {session?.user?.user_metadata?.photo_url ? <img src={registeredUser.photo} alt="avatar" style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", border:"2px solid #00FF8844" }} /> : <div style={{ width:36, height:36, borderRadius:"50%", background:"#111", border:"2px solid #1a1a1a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>}
+          <button onClick={() => setNav("profile")} style={{ background:"none", border:"none", cursor:"pointer", padding:0 }}>
+            {session?.user?.user_metadata?.photo_url ? <img src={session?.user?.user_metadata?.photo_url} alt="avatar" style={{ width:36, height:36, borderRadius:"50%", objectFit:"cover", border:"2px solid #00FF8844" }} /> : <div style={{ width:36, height:36, borderRadius:"50%", background:"#111", border:"2px solid #1a1a1a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>}
+          </button>
           <div style={{ display:"flex", alignItems:"center", gap:4 }}><Blink /><span style={{ color:"#00FF88", fontSize:9, fontWeight:700 }}>VERIFIED</span></div>
         </div>
       </div>
