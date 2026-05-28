@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import AgoraRTC, { APP_ID } from "../lib/agora";
 import emailjs from "@emailjs/browser";
+emailjs.init("k2v8M51WNm1oiKGTBQz1i");
 
 const NIGERIAN_STATES_LIST = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
