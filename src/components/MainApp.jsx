@@ -1708,7 +1708,20 @@ function ProfileScreen({ session, onBack }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CHECKPOINT TRACKER
+// LIVE ALERTS SCREEN — pulls real incidents from Supabase
+// ─────────────────────────────────────────────────────────────────────────────
+function LiveAlertsScreen({ session }) {
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterState, setFilterState] = useState("all");
+  const [newAlert, setNewAlert] = useState(false);
+  const [userCoords, setUserCoords] = useState(null);
+
+  const TYPE_LABELS = { kidnapping:"Kidnapping", kidnapping_attempt:"Kidnapping Attempt", robbery:"Armed Robbery", armed_robbery:"Armed Robbery", suspicious:"Suspicious Activity", suspicious_activity:"Suspicious Activity", suspicious_vehicle:"Suspicious Vehicle", attack:"Physical Attack", physical_attack:"Physical Attack", vehicle:"Suspect Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
+  const TYPE_ICONS = { kidnapping:"🚨", kidnapping_attempt:"🚨", robbery:"🔫", armed_robbery:"🔫", suspicious:"👁️", suspicious_activity:"👁️", suspicious_vehicle:"🚗", attack:"⚠️", physical_attack:"⚠️", vehicle:"🚗", banditry:"🏕️", terrorism:"💣", other:"📢" };
+  const TYPE_COLORS = { kidnapping:"#FF2D2D", kidnapping_attempt:"#FF2D2D", robbery:"#FF6B00",
 // ─────────────────────────────────────────────────────────────────────────────
 const CHECKPOINTS_DATA = [
   { id:1, route:"Kaduna–Abuja Expressway", location:"Kachia Junction, km 28", type:"army", desc:"Nigerian Army — 3 soldiers, thorough check", reports:34, mins:12, direction:"Both", severity:"medium" },
