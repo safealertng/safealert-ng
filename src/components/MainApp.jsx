@@ -1938,9 +1938,12 @@ function NewsScreen() {
                   </button>
                 </div>
                 {isOpen && <div style={{ fontSize:12, color:"#777", lineHeight:1.8, borderTop:"1px solid #111", paddingTop:10, marginTop:4 }}>{item.body}</div>}
-                <button onClick={() => setExpanded(isOpen ? null : item.id)} style={{ background:"none", border:"none", color:"#FFB800", fontSize:11, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, marginTop:4, padding:0 }}>
-                  {isOpen ? "▲ Show less" : "▼ Read full report"}
-                </button>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:4 }}>
+                  <button onClick={() => setExpanded(isOpen ? null : item.id)} style={{ background:"none", border:"none", color:"#FFB800", fontSize:11, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, padding:0 }}>
+                    {isOpen ? "▲ Show less" : "▼ Read full report"}
+                  </button>
+                  <button onClick={() => window.open(`https://wa.me/?text=🚨 SECURITY NEWS via SafeAlert NG 🇳🇬\n\n*${item.headline}*\n\n📍 ${item.state} · 🕐 ${item.time} · 📡 ${item.source}\n\n${item.body}\n\n⚠️ Stay safe! Download SafeAlert NG`)} style={{ background:"#25D36622", border:"1px solid #25D36644", borderRadius:6, padding:"4px 10px", fontSize:11, color:"#25D366", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📤 Share</button>
+                </div>
               </div>
             </div>
           );
