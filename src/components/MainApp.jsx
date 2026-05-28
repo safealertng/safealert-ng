@@ -1355,7 +1355,7 @@ function TipLineScreen() {
       const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
       await emailjs.send(
         "safealert_service",
-        "jawcyp6",
+        "template_ooew17k",
         {
           category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
           agency: agency,
