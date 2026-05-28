@@ -1893,10 +1893,57 @@ function NewsScreen() {
   const [newsFilter, setNewsFilter] = useState("all");
   const [expanded, setExpanded] = useState(null);
   const [bookmarked, setBookmarked] = useState([]);
-  const filtered = newsFilter === "all" ? NEWS_DATA
-    : newsFilter === "urgent" ? NEWS_DATA.filter(n => n.urgent)
-    : NEWS_DATA.filter(n => n.category === newsFilter);
+  const [liveNews, setLiveNews] = useState([]);
+  const [showAddNews, setShowAddNews] = useState(false);
+  const [newHeadline, setNewHeadline] = useState("");
+  const [newBody, setNewBody] = useState("");
+  const [newState, setNewState] = useState("");
+  const [newCategory, setNewCategory] = useState("");
+  const [newSource, setNewSource] = useState("");
+  const [newUrgent, setNewUrgent] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      const { data, error } = await supabase
+        .from("security_news")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (!error && data) setLiveNews(data);
+    };
+    fetchNews();
+    const channel = supabase
+      .channel("news-feed")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "security_news" },
+        (payload) => setLiveNews(prev => [payload.new, ...prev])
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
+
+  const postNews = async () => {
+    if (!newHeadline || !newBody || !newState || !newCategory) return;
+    setPosting(true);
+    const { error } = await supabase.from("security_news").insert({
+      headline: newHeadline, body: newBody, state: newState,
+      category: newCategory, source: newSource || "SafeAlert NG",
+      urgent: newUrgent
+    });
+    setPosting(false);
+    if (!error) {
+      setNewHeadline(""); setNewBody(""); setNewState("");
+      setNewCategory(""); setNewSource(""); setNewUrgent(false);
+      setShowAddNews(false);
+    } else alert("Error: " + error.message);
+  };
+
+  const allNews = [...liveNews.map(n => ({ ...n, time: new Date(n.created_at).toLocaleString("en-NG") })), ...NEWS_DATA];
+  const filtered = newsFilter === "all" ? allNews
+    : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
+    : allNews.filter(n => n.category === newsFilter);
   const toggleBookmark = (id) => setBookmarked(b => b.includes(id) ? b.filter(x => x !== id) : [...b, id]);
+
   return (
     <div style={{ paddingBottom:28 }}>
       <div style={{ background:"#0d0d0d", borderBottom:"1px solid #111", padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1904,8 +1951,39 @@ function NewsScreen() {
           <div style={{ width:7, height:7, borderRadius:"50%", background:"#FF2D2D", boxShadow:"0 0 6px #FF2D2D", animation:"blink 0.9s ease-in-out infinite" }} />
           <span style={{ fontSize:11, fontWeight:700, color:"#FF2D2D", letterSpacing:2 }}>LIVE FEED</span>
         </div>
-        <span style={{ fontSize:10, color:"#444", fontFamily:"monospace" }}>{NEWS_DATA.length} reports today</span>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <span style={{ fontSize:10, color:"#444", fontFamily:"monospace" }}>{filtered.length} reports</span>
+          <button onClick={() => setShowAddNews(!showAddNews)} style={{ background:"#FF2D2D22", border:"1px solid #FF2D2D44", borderRadius:6, padding:"4px 10px", fontSize:11, color:"#FF2D2D", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>+ Post News</button>
+        </div>
       </div>
+
+      {showAddNews && (
+        <div style={{ margin:"12px 16px", background:"#0d0d0d", border:"1px solid #FF2D2D33", borderRadius:12, padding:14 }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#FF2D2D", marginBottom:10, fontFamily:"monospace" }}>POST SECURITY NEWS</div>
+          <input value={newHeadline} onChange={e => setNewHeadline(e.target.value)} placeholder="Headline..." style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }} />
+          <textarea value={newBody} onChange={e => setNewBody(e.target.value)} placeholder="Full story..." style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#ccc", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif", height:80, resize:"none", marginBottom:8 }} />
+          <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+            <select value={newState} onChange={e => setNewState(e.target.value)} style={{ flex:1, background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif" }}>
+              <option value="">State...</option>
+              {NIGERIAN_STATES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={newCategory} onChange={e => setNewCategory(e.target.value)} style={{ flex:1, background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:12, fontFamily:"'Barlow Condensed',sans-serif" }}>
+              <option value="">Category...</option>
+              {["banditry","terrorism","robbery","kidnap","alert","cult","other"].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <input value={newSource} onChange={e => setNewSource(e.target.value)} placeholder="Source (e.g. NAN, Police HQ)..." style={{ width:"100%", background:"#111", border:"1px solid #1e1e1e", borderRadius:8, padding:"9px 12px", color:"#fff", fontSize:13, fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }} />
+          <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10 }}>
+            <input type="checkbox" checked={newUrgent} onChange={e => setNewUrgent(e.target.checked)} id="urgent-check" />
+            <label htmlFor="urgent-check" style={{ color:"#FF2D2D", fontSize:12, fontWeight:700, cursor:"pointer" }}>Mark as URGENT</label>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={postNews} disabled={posting} style={{ flex:1, background:"linear-gradient(135deg,#FF2D2D,#990000)", border:"none", borderRadius:8, padding:"11px", color:"#fff", fontSize:13, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>{posting ? "POSTING..." : "POST NEWS"}</button>
+            <button onClick={() => setShowAddNews(false)} style={{ flex:1, background:"#111", border:"1px solid #222", borderRadius:8, padding:"11px", color:"#555", fontSize:13, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>CANCEL</button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display:"flex", gap:6, padding:"10px 16px 0", overflowX:"auto" }}>
         {[["all","All News"],["urgent","🔴 Urgent"],["banditry","Banditry"],["terrorism","Terror"],["robbery","Robbery"],["kidnap","Kidnap"],["alert","Advisories"]].map(([v,l]) => (
           <button key={v} onClick={() => setNewsFilter(v)} style={{ flexShrink:0, borderRadius:20, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", background:newsFilter===v?"#ffffff18":"#0d0d0d", color:newsFilter===v?"#fff":"#555", border:`1px solid ${newsFilter===v?"#ffffff33":"#1a1a1a"}` }}>{l}</button>
