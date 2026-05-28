@@ -969,7 +969,7 @@ function ConvoyScreen() {
 
   useEffect(() => {
     if (convoyTab === "active" && mapRef.current && !mapInstanceRef.current) {
-      const L = window.L;
+      import("leaflet").then(({ default: L }) => {
       if (!L) return;
       const center = userLocation ? [userLocation.lat, userLocation.lng] : [9.0765, 7.3986];
       const map = L.map(mapRef.current).setView(center, 10);
@@ -996,6 +996,7 @@ function ConvoyScreen() {
           .bindPopup(`<b>${m.name}</b>`);
         markersRef.current.push(marker);
       });
+      }); // close import
     }
     return () => {
       if (mapInstanceRef.current && convoyTab !== "active") {
