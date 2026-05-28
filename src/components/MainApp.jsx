@@ -958,6 +958,7 @@ function ConvoyScreen() {
   const [plateNumber, setPlateNumber] = useState("");
   const [alertSent, setAlertSent] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [routeFilter, setRouteFilter] = useState("all");
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -1122,13 +1123,22 @@ function ConvoyScreen() {
       {convoyTab === "routes" && (
         <div style={{ padding:"0 16px" }}>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>KNOWN DANGER ROUTES — NIGERIA</div>
-          {DANGER_ROUTES.map(r=>(
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            {[["all","All"],["HIGH","🔴 High"],["MEDIUM","🟡 Medium"]].map(([v,l]) => (
+              <button key={v} onClick={() => setRouteFilter(v)} style={{ flexShrink:0, borderRadius:20, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", background:routeFilter===v?"#FF2D2D22":"#0d0d0d", color:routeFilter===v?"#FF2D2D":"#555", border:`1px solid ${routeFilter===v?"#FF2D2D55":"#1a1a1a"}` }}>{l}</button>
+            ))}
+          </div>
+          {DANGER_ROUTES.filter(r => routeFilter === "all" || r.risk === routeFilter).map(r=>(
             <div key={r.route} style={{ ...cS.card, marginBottom:8, borderLeft:`3px solid ${r.color}` }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <div style={{ fontWeight:800, fontSize:13 }}>{r.route}</div>
                 <div style={{ background:`${r.color}22`, border:`1px solid ${r.color}44`, borderRadius:5, padding:"2px 8px", fontSize:10, fontWeight:700, color:r.color }}>{r.risk}</div>
               </div>
-              <div style={{ color:"#444", fontSize:11, marginTop:5 }}>📊 {r.incidents} incidents reported · Last: {r.lastIncident}</div>
+              <div style={{ color:"#444", fontSize:11, marginTop:5 }}>📊 {r.incidents} incidents · Last: {r.lastIncident}</div>
+              <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                <button onClick={() => window.open(`https://wa.me/?text=⚠️ DANGER ALERT: ${r.route} is rated ${r.risk} risk. ${r.incidents} incidents reported. Last incident: ${r.lastIncident}. Stay safe! 🛡️ via SafeAlert NG`)} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:6, padding:"6px", fontSize:11, color:"#25D366", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📤 Share on WhatsApp</button>
+                <button onClick={() => alert(`🚨 Route reported as dangerous! Thank you for keeping Nigeria safe.`)} style={{ flex:1, background:`${r.color}11`, border:`1px solid ${r.color}33`, borderRadius:6, padding:"6px", fontSize:11, color:r.color, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>⚠️ Report Incident</button>
+              </div>
             </div>
           ))}
         </div>
