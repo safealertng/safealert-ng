@@ -539,7 +539,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {(realFamily.length > 0 ? realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone, name: m.nickname || m.name})) : FAMILY_MEMBERS).map(m => (
+          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ?? "Live", battery:100, location:m.phone, name: m.nickname})).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
@@ -794,7 +794,7 @@ const agoraVideoRef = useRef(null);
 
       {/* Family strip */}
       <div style={{ display:"flex", gap:6, padding:"10px 16px", borderBottom:"1px solid #0f0f0f", overflowX:"auto" }}>
-        {realFamily.length > 0 ? realFamily.map(m => (
+        {familyMembers.length > 0 ? familyMembers.map(m => (
           <button key={m.id} onClick={() => setNav("family")} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
             <div style={{ position:"relative" }}>
               <div style={{ width:34, height:34, borderRadius:"50%", background:"#111", border:"1px solid #00FF8844", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>
@@ -853,7 +853,7 @@ const agoraVideoRef = useRef(null);
       </div>
 
       {/* Alert member callout */}
-      {realFamily.length > 0 && realFamily.slice(0,1).map(m => (
+      {familyMembers.length > 0 && familyMembers.slice(0,1).map(m => (
         <button key={m.id} onClick={() => setNav("family")} style={S.alertCallout}>
           <span style={{ fontSize:24 }}>👤</span>
           <div style={{ flex:1, textAlign:"left" }}>
