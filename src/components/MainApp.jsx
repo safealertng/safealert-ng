@@ -87,6 +87,7 @@ const ZONE_COLORS = { "North West":"#4A90D9","North East":"#E67E22","North Centr
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MainApp({ session }) {
   const [nav, setNav] = useState("home");
+  const [familyMembers, setFamilyMembers] = useState([]);
   const [userLocation, setUserLocation] = useState("{userLocation}");
   const [userCoords, setUserCoords] = useState(null);
 
@@ -117,6 +118,20 @@ export default function MainApp({ session }) {
       );
     }
   }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
+  useEffect(() => {
+  const loadFamily = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) return;
+    const { data, error } = await supabase
+      .from('family_members')
+      .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
+      .eq('owner_id', session.user.id);
+    if (error) { console.error('Family fetch error:', error.message); return; }
+    console.log('Family members loaded:', data);
+    setFamilyMembers(data ?? []);
+  };
+  loadFamily();
+}, []);
   const [panicStage, setPanicStage] = useState("idle");
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
@@ -368,7 +383,7 @@ const agoraVideoRef = useRef(null);
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
       <Section label="FAMILY MEMBERS ALERTED">
-        {FAMILY_MEMBERS.map(m => <RespRow key={m.id} icon={m.avatar} title={m.name} sub={m.location} ok={dispatched} />)}
+        {familyMembers.map(m => <RespRow key={m.id} icon={"👤"} title={m.nickname} sub={m.phone} ok={dispatched} />)}
       </Section>
       <Section label="EMERGENCY SERVICES">
         {[{icon:"🚔",name:"Nigeria Police Force",num:"199"},{icon:"🛡️",name:"DSS Emergency",num:"08039003044"},{icon:"⚔️",name:"NSCDC",num:"112"}].map(e =>
@@ -524,7 +539,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {(realFamily.length > 0 ? realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone, name: m.nickname || m.name})) : FAMILY_MEMBERS).map(m => (
+          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString() : "Live", battery:100, location:m.phone, name: m.nickname})).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
@@ -816,7 +831,7 @@ const agoraVideoRef = useRef(null);
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, padding:"0 16px 12px" }}>
         {[
           { icon:"📹", label:"Report Incident", action:() => setNav("report") },
-          { icon:"👨‍👩‍👧‍👦", label:"Family Tracker", action:() => setNav("family"), alert: FAMILY_MEMBERS.some(m => m.status==="alert") },
+          { icon:"👨‍👩‍👧‍👦", label:"Family Tracker", action:() => setNav("family"), alert: familyMembers.some(m => m.status==="alert") },
           { icon:"📡", label:"Live Alerts", action:() => setNav("alerts") },
           { icon:"🗺️", label:"State Contacts", action:() => setNav("contacts") },
           { icon:"🚗", label:"Safe Convoy", action:() => setNav("convoy"), badge:"NEW" },
