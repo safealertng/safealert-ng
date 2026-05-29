@@ -834,14 +834,14 @@ const agoraVideoRef = useRef(null);
       </div>
 
       {/* Alert member callout */}
-      {FAMILY_MEMBERS.filter(m => m.status==="alert").map(m => (
-        <button key={m.id} onClick={() => { setNav("family"); setSelectedMember(m); }} style={S.alertCallout}>
-          <span style={{ fontSize:24 }}>{m.avatar}</span>
+      {realFamily.length > 0 && realFamily.slice(0,1).map(m => (
+        <button key={m.id} onClick={() => setNav("family")} style={S.alertCallout}>
+          <span style={{ fontSize:24 }}>👤</span>
           <div style={{ flex:1, textAlign:"left" }}>
-            <div style={{ color:"#FF2D2D", fontWeight:900, fontSize:13 }}>⚠️ {m.name} — LOW BATTERY + ALERT</div>
-            <div style={{ color:"#666", fontSize:11 }}>{m.location} · {m.lastSeen}</div>
+            <div style={{ color:"#00FF88", fontWeight:900, fontSize:13 }}>✅ {m.nickname || m.name} — FAMILY MEMBER</div>
+            <div style={{ color:"#666", fontSize:11 }}>{m.phone} · Added</div>
           </div>
-          <span style={{ color:"#FF2D2D", fontSize:16 }}>›</span>
+          <span style={{ color:"#00FF88", fontSize:16 }}>›</span>
         </button>
       ))}
 
