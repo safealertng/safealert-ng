@@ -16,7 +16,12 @@ const NIGERIAN_STATES_LIST = [
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────────────────────
-const FAMILY_MEMBERS = [];
+const FAMILY_MEMBERS = [
+  { id: 1, name: "Mama Chidi", relation: "Mother", avatar: "👩🏾", status: "safe", lastSeen: "2 mins ago", battery: 82, location: "Ikeja, Lagos" },
+  { id: 2, name: "Chidi Jr", relation: "Son", avatar: "👦🏾", status: "safe", lastSeen: "5 mins ago", battery: 45, location: "Wuse 2, Abuja" },
+  { id: 3, name: "Aunty Ngozi", relation: "Aunt", avatar: "👩🏾‍🦱", status: "alert", lastSeen: "12 mins ago", battery: 18, location: "GRA, Port Harcourt" },
+  { id: 4, name: "Uncle Emeka", relation: "Uncle", avatar: "👨🏾", status: "safe", lastSeen: "1 hr ago", battery: 67, location: "Kano Central" },
+];
 
 const INCIDENT_TYPES = [
   { id: "kidnapping", label: "Kidnapping", icon: "🚨", color: "#FF2D2D" },
@@ -81,22 +86,7 @@ const ZONE_COLORS = { "North West":"#4A90D9","North East":"#E67E22","North Centr
 // ROOT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MainApp({ session }) {
-const [familyMembers, setFamilyMembers] = useState([]);
-
-useEffect(() => {
-  const loadFamily = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
-    const { data, error } = await supabase
-      .from('family_members')
-      .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
-      .eq('owner_id', session.user.id);
-    if (error) { console.error('Family fetch error:', error.message); return; }
-    console.log('Family members loaded:', data);
-    setFamilyMembers(data ?? []);
-  };
-  loadFamily();
-}, []);
+  const [nav, setNav] = useState("home");
   const [userLocation, setUserLocation] = useState("{userLocation}");
   const [userCoords, setUserCoords] = useState(null);
 
@@ -378,7 +368,7 @@ const agoraVideoRef = useRef(null);
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
       <Section label="FAMILY MEMBERS ALERTED">
-        {familyMembers.map(m => <RespRow key={m.id} icon={"👤"} title={m.nickname} sub={m.phone} ok={dispatched} />)}
+        {FAMILY_MEMBERS.map(m => <RespRow key={m.id} icon={m.avatar} title={m.name} sub={m.location} ok={dispatched} />)}
       </Section>
       <Section label="EMERGENCY SERVICES">
         {[{icon:"🚔",name:"Nigeria Police Force",num:"199"},{icon:"🛡️",name:"DSS Emergency",num:"08039003044"},{icon:"⚔️",name:"NSCDC",num:"112"}].map(e =>
@@ -534,7 +524,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString() : "Live", battery:100, location:m.phone, name: m.nickname})).map(m => (
+          {(realFamily.length > 0 ? realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone, name: m.nickname || m.name})) : FAMILY_MEMBERS).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
@@ -826,7 +816,7 @@ const agoraVideoRef = useRef(null);
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, padding:"0 16px 12px" }}>
         {[
           { icon:"📹", label:"Report Incident", action:() => setNav("report") },
-          { icon:"👨‍👩‍👧‍👦", label:"Family Tracker", action:() => setNav("family"), alert: familyMembers.some(m => m.status==="alert") },
+          { icon:"👨‍👩‍👧‍👦", label:"Family Tracker", action:() => setNav("family"), alert: FAMILY_MEMBERS.some(m => m.status==="alert") },
           { icon:"📡", label:"Live Alerts", action:() => setNav("alerts") },
           { icon:"🗺️", label:"State Contacts", action:() => setNav("contacts") },
           { icon:"🚗", label:"Safe Convoy", action:() => setNav("convoy"), badge:"NEW" },
