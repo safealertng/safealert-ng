@@ -16,27 +16,12 @@ const NIGERIAN_STATES_LIST = [
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────────────────────
-useEffect(() => {
-  const loadFamily = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
-
-    const { data, error } = await supabase
-      .from('family_members')
-      .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
-      .eq('owner_id', session.user.id);
-
-    if (error) {
-      console.error('Family fetch error:', error.message);
-      return;
-    }
-
-    console.log('Family members loaded:', data);
-    setFamilyMembers(data ?? []);
-  };
-
-  loadFamily();
-}, []);
+const FAMILY_MEMBERS = [
+  { id: 1, name: "Mama Chidi", relation: "Mother", avatar: "👩🏾", status: "safe", lastSeen: "2 mins ago", battery: 82, location: "Ikeja, Lagos" },
+  { id: 2, name: "Chidi Jr", relation: "Son", avatar: "👦🏾", status: "safe", lastSeen: "5 mins ago", battery: 45, location: "Wuse 2, Abuja" },
+  { id: 3, name: "Aunty Ngozi", relation: "Aunt", avatar: "👩🏾‍🦱", status: "alert", lastSeen: "12 mins ago", battery: 18, location: "GRA, Port Harcourt" },
+  { id: 4, name: "Uncle Emeka", relation: "Uncle", avatar: "👨🏾", status: "safe", lastSeen: "1 hr ago", battery: 67, location: "Kano Central" },
+];
 
 const INCIDENT_TYPES = [
   { id: "kidnapping", label: "Kidnapping", icon: "🚨", color: "#FF2D2D" },
@@ -383,7 +368,7 @@ const agoraVideoRef = useRef(null);
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
       <Section label="FAMILY MEMBERS ALERTED">
-        {familyMembers.map(m => <RespRow key={m.id} icon={"👤"} title={m.nickname} sub={m.phone} ok={dispatched} />)}
+        {FAMILY_MEMBERS.map(m => <RespRow key={m.id} icon={m.avatar} title={m.name} sub={m.location} ok={dispatched} />)}
       </Section>
       <Section label="EMERGENCY SERVICES">
         {[{icon:"🚔",name:"Nigeria Police Force",num:"199"},{icon:"🛡️",name:"DSS Emergency",num:"08039003044"},{icon:"⚔️",name:"NSCDC",num:"112"}].map(e =>
