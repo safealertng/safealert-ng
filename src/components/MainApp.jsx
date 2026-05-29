@@ -524,7 +524,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {[...realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone})), ...FAMILY_MEMBERS].map(m => (
+          {(realFamily.length > 0 ? realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone, name: m.nickname || m.name})) : FAMILY_MEMBERS).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
