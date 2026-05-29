@@ -539,7 +539,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString() : "Live", battery:100, location:m.phone, name: m.nickname})).map(m => (
+          {(realFamily.length > 0 ? realFamily.map(m => ({...m, avatar:"👤", status:"safe", lastSeen:"Live", battery:100, location:m.phone, name: m.nickname || m.name})) : FAMILY_MEMBERS).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
@@ -560,7 +560,7 @@ const agoraVideoRef = useRef(null);
             <MicroLabel>SHAKE-TO-SOS</MicroLabel>
             <div style={{ color:"#555", fontSize:12, marginTop:4 }}>Any member can shake their phone 3× for a silent SOS. You'll receive their live GPS + video instantly.</div>
             <div style={{ display:"flex", gap:8, marginTop:12 }}>
-              {[["4","Members","#00FF88"],["1","On Alert","#FF2D2D"],["3","Safe","#00FF88"]].map(([n,l,c]) => (
+              {[[String(familyMembers.length),"Members","#00FF88"],[String(familyMembers.filter(m=>m.status==="alert").length),"On Alert","#FF2D2D"],[String(familyMembers.filter(m=>m.status!=="alert").length),"Safe","#00FF88"]].map(([n,l,c]) => (
                 <div key={l} style={{ flex:1, background:"#111", borderRadius:8, padding:"10px 6px", textAlign:"center" }}>
                   <div style={{ fontSize:22, fontWeight:900, color:c }}>{n}</div>
                   <div style={{ fontSize:10, color:"#444", marginTop:2 }}>{l}</div>
