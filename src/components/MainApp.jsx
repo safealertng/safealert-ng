@@ -779,15 +779,19 @@ const agoraVideoRef = useRef(null);
 
       {/* Family strip */}
       <div style={{ display:"flex", gap:6, padding:"10px 16px", borderBottom:"1px solid #0f0f0f", overflowX:"auto" }}>
-        {FAMILY_MEMBERS.map(m => (
-          <button key={m.id} onClick={() => { setNav("family"); setSelectedMember(m); }} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
+        {realFamily.length > 0 ? realFamily.map(m => (
+          <button key={m.id} onClick={() => setNav("family")} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
             <div style={{ position:"relative" }}>
-              <span style={{ fontSize:28 }}>{m.avatar}</span>
-              <div style={{ position:"absolute", bottom:-1, right:-1, width:9, height:9, borderRadius:"50%", background:m.status==="alert"?"#FF2D2D":"#00FF88", border:"1.5px solid #0d0d0d", boxShadow:`0 0 5px ${m.status==="alert"?"#FF2D2D":"#00FF88"}` }} />
+              <div style={{ width:34, height:34, borderRadius:"50%", background:"#111", border:"1px solid #00FF8844", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>👤</div>
+              <div style={{ position:"absolute", bottom:-1, right:-1, width:9, height:9, borderRadius:"50%", background:"#00FF88", border:"1.5px solid #0d0d0d", boxShadow:"0 0 5px #00FF88" }} />
             </div>
-            <div style={{ fontSize:9, color:"#555", marginTop:3, maxWidth:50, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.name.split(" ")[0]}</div>
+            <div style={{ fontSize:9, color:"#555", marginTop:3, maxWidth:50, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{(m.nickname || m.name || "").split(" ")[0]}</div>
           </button>
-        ))}
+        )) : (
+          <div style={{ display:"flex", alignItems:"center", gap:6, color:"#333", fontSize:11 }}>
+            <span>No family members yet</span>
+          </div>
+        )}
         <button onClick={() => { setNav("family"); setAddingMember(true); }} style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"none", border:"none", cursor:"pointer", flexShrink:0 }}>
           <div style={{ width:34, height:34, borderRadius:"50%", background:"#0f0f0f", border:"1px dashed #2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, color:"#333" }}>+</div>
           <div style={{ fontSize:9, color:"#333", marginTop:3 }}>Add</div>
