@@ -833,7 +833,7 @@ const agoraVideoRef = useRef(null);
       </div>
 
       {/* Alert member callout */}
-      {realFamily.length > 0 && realFamily.slice(0,1).map(m => (
+      {familyMembers.length > 0 && familyMembers.slice(0,1).map(m => (
         <button key={m.id} onClick={() => setNav("family")} style={S.alertCallout}>
           <span style={{ fontSize:24 }}>👤</span>
           <div style={{ flex:1, textAlign:"left" }}>
