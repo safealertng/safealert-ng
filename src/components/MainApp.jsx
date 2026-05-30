@@ -167,8 +167,8 @@ const agoraVideoRef = useRef(null);
   };
 
   const deleteFamilyMember = async (id) => {
-    const { error } = await supabase.from("family_members").delete().eq("id", id);
-    fetchFamily();
+    await supabase.from("family_members").delete().eq("id", id);
+    setFamilyMembers(prev => prev.filter(m => m.id !== id));
   };
 
   const startVoiceRecording = async () => {
