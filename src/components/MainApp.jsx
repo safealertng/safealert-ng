@@ -533,8 +533,9 @@ const agoraVideoRef = useRef(null);
             ))}
           </div>
           <div style={{ display:"flex", gap:10, marginTop:10 }}>
-            <button style={{ ...S.redBtn, flex:1, fontSize:12 }}>📞 Call Now</button>
+            <button style={{ ...S.redBtn, flex:1, fontSize:12 }} onClick={() => window.open(`tel:${selectedMember.phone}`)}>📞 Call Now</button>
             <button style={{ ...S.redBtn, flex:1, fontSize:12, background:"#1a1a1a", boxShadow:"none", color:"#ccc" }}>💬 Send Alert</button>
+            <button onClick={() => { deleteFamilyMember(selectedMember.id); setSelectedMember(null); }} style={{ ...S.redBtn, flex:1, fontSize:12, background:"#1a1a1a", boxShadow:"none", color:"#FF2D2D", border:"1px solid #FF2D2D33" }}>🗑️ Remove</button>
           </div>
         </div>
       ) : (
