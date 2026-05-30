@@ -159,7 +159,8 @@ const agoraVideoRef = useRef(null);
     if (!error) {
       setNewName(""); setNewPhone(""); setNewRelation("");
       setAddingMember(false);
-      fetchFamily();
+      const { data } = await supabase.from('family_members').select('id, nickname, relation, phone, last_lat, last_lng, last_seen').eq('owner_id', session?.user?.id);
+      setFamilyMembers(data ?? []);
     } else {
       alert("Error adding member: " + error.message);
     }
