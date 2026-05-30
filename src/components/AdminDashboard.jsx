@@ -90,7 +90,7 @@ export default function AdminDashboard({ session, onBack }) {
   const addAdminRole = async () => {
     if (!newAdminEmail) return;
     const { data: userData } = await supabase
-      .from("registrations")
+      .from("admin_users")
       .select("user_id")
       .eq("email", newAdminEmail)
       .single();
