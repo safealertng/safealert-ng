@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import AgoraRTC, { APP_ID } from "../lib/agora";
+import AdminDashboard from "./AdminDashboard";
 import emailjs from "@emailjs/browser";
 emailjs.init("EJAw6dlAaCLeS4iHq");
 
@@ -770,10 +771,14 @@ const agoraVideoRef = useRef(null);
   );
 
     // ── PROFILE ──────────────────────────────────────────────────────────────
+  if (nav === "admin") return (
+    <AdminDashboard session={session} onBack={() => setNav("home")} />
+  );
+
   if (nav === "profile") return (
     <Shell shakeFlash={false}>
       <TopBar title="MY PROFILE" onBack={() => setNav("home")} />
-      <ProfileScreen session={session} onBack={() => setNav("home")} />
+      <ProfileScreen session={session} onBack={() => setNav("home")} onAdmin={() => setNav("admin")} />
     </Shell>
   );
 
@@ -1564,7 +1569,7 @@ const cS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // LIVE ALERTS SCREEN — pulls real incidents from Supabase
 // ─────────────────────────────────────────────────────────────────────────────
-function ProfileScreen({ session, onBack }) {
+function ProfileScreen({ session, onBack, onAdmin }) {
   const [fullName, setFullName] = useState(session?.user?.user_metadata?.full_name || "");
   const [phone, setPhone] = useState(session?.user?.user_metadata?.phone || "");
   const [userState, setUserState] = useState(session?.user?.user_metadata?.state || "");
@@ -1649,6 +1654,9 @@ function ProfileScreen({ session, onBack }) {
           </div>
         ))}
       </div>
+      <button onClick={onAdmin} style={{ width:"100%", background:"transparent", border:"1px solid #FF6B0033", borderRadius:8, padding:"12px", color:"#FF6B00", fontSize:14, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", marginBottom:8 }}>
+        🔐 ADMIN DASHBOARD
+      </button>
       <button onClick={signOut} style={{ width:"100%", background:"transparent", border:"1px solid #FF2D2D33", borderRadius:8, padding:"12px", color:"#FF2D2D", fontSize:14, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>
         🚪 SIGN OUT
       </button>
