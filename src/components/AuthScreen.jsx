@@ -9,8 +9,8 @@ const NIGERIAN_STATES = [
   "Sokoto","Taraba","Yobe","Zamfara"
 ];
 
-export default function AuthScreen({ onAuth }) {
-  const [step, setStep] = useState("email");
+export default function AuthScreen({ onAuth, forceProfile }) {
+  const [step, setStep] = useState(forceProfile ? "profile" : "email");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

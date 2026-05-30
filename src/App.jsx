@@ -55,9 +55,14 @@ export default function App() {
     );
   }
 
-  return session ? (
-    <MainApp session={session} />
-  ) : (
-    <AuthScreen onAuth={setSession} />
-  );
+  if (session) {
+    const meta = session.user?.user_metadata;
+    const profileComplete = meta?.full_name && meta?.phone && meta?.state;
+    if (!profileComplete) {
+      return <AuthScreen onAuth={setSession} forceProfile={true} />;
+    }
+    return <MainApp session={session} />;
+  }
+
+  return <AuthScreen onAuth={setSession} />;
 }
