@@ -167,9 +167,7 @@ const agoraVideoRef = useRef(null);
   };
 
   const deleteFamilyMember = async (id) => {
-    console.log('Deleting member id:', id);
     const { error } = await supabase.from("family_members").delete().eq("id", id);
-    console.log('Delete error:', error);
     fetchFamily();
   };
 
