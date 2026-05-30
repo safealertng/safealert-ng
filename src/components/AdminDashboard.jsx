@@ -47,7 +47,7 @@ export default function AdminDashboard({ session, onBack }) {
   const fetchAll = async () => {
     setLoading(true);
     const [usersRes, incidentsRes, panicRes, rolesRes, familyRes] = await Promise.all([
-      supabase.from("registrations").select("*").order("created_at", { ascending: false }),
+      supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
       supabase.from("admin_roles").select("*").order("created_at", { ascending: false }),
@@ -76,14 +76,14 @@ export default function AdminDashboard({ session, onBack }) {
 
   const banUser = async (userId) => {
     if (!window.confirm("Ban this user?")) return;
-    await supabase.from("registrations").update({ banned: true }).eq("user_id", userId);
-    setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, banned: true } : u));
+    await supabase.auth.admin.updateUserById(userId, { ban_duration: "876600h" });
+    setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, banned_until: "banned" } : u));
     showToast("User banned", "#FF2D2D");
   };
 
   const unbanUser = async (userId) => {
-    await supabase.from("registrations").update({ banned: false }).eq("user_id", userId);
-    setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, banned: false } : u));
+    await supabase.auth.admin.updateUserById(userId, { ban_duration: "none" });
+    setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, banned_until: null } : u));
     showToast("User unbanned");
   };
 
@@ -208,7 +208,7 @@ export default function AdminDashboard({ session, onBack }) {
                   <div style={{ color: "#555", fontSize: 11 }}>{u.email} · {u.state || "No state"}</div>
                   <div style={{ color: "#444", fontSize: 10 }}>Joined: {new Date(u.created_at).toLocaleDateString("en-NG")}</div>
                 </div>
-                {u.banned ? (
+                {u.banned_until ? (
                   <button onClick={() => unbanUser(u.user_id)} style={{ ...A.smBtn, color: "#00FF88", borderColor: "#00FF8844" }}>Unban</button>
                 ) : (
                   adminRole === "super_admin" || adminRole === "admin" ? (
