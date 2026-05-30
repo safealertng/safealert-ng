@@ -30,9 +30,9 @@ export default function AdminDashboard({ session, onBack }) {
       const { data, error } = await supabase
         .from("admin_roles")
         .select("role")
-        .eq("user_id", session?.user?.id)
-        .single();
-      if (!error && data) setAdminRole(data.role);
+        .eq("user_id", session?.user?.id);
+      console.log('Admin role check:', data, error);
+      if (!error && data && data.length > 0) setAdminRole(data[0].role);
       setChecking(false);
     };
     checkRole();
