@@ -18,6 +18,8 @@ export default function AdminDashboard({ session, onBack }) {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [checkpoints, setCheckpoints] = useState([]);
+  const [pendingNews, setPendingNews] = useState([]);
 
   const showToast = (msg, color = "#00FF88") => {
     setToast({ msg, color });
@@ -46,13 +48,17 @@ export default function AdminDashboard({ session, onBack }) {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes] = await Promise.all([
+    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes] = await Promise.all([
       supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
       supabase.from("admin_roles").select("*").order("created_at", { ascending: false }),
       supabase.from("family_members").select("count", { count: "exact" }),
+      supabase.from("checkpoint_reports").select("*").order("created_at", { ascending: false }),
+      supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
     ]);
+    if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
+    if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
     if (usersRes.data) setUsers(usersRes.data);
     if (incidentsRes.data) setIncidents(incidentsRes.data);
     if (panicRes.data) setPanicEvents(panicRes.data);
@@ -155,6 +161,8 @@ export default function AdminDashboard({ session, onBack }) {
           ["users", "👥 Users"],
           ["incidents", "🚨 Incidents"],
           ["panics", "🆘 Panics"],
+          ["checkpoints", "🚧 Checkpoints"],
+          ["pending", "📰 Pending News"],
           ...(adminRole === "super_admin" ? [["roles", "🔐 Roles"]] : []),
         ].map(([k, l]) => (
           <button key={k} onClick={() => setNav(k)} style={{ ...A.navBtn, borderBottom: nav === k ? "2px solid #FF2D2D" : "2px solid transparent", color: nav === k ? "#FF2D2D" : "#555" }}>{l}</button>
@@ -255,6 +263,70 @@ export default function AdminDashboard({ session, onBack }) {
                   <div style={{ color: "#444", fontSize: 10 }}>GPS: {p.lat?.toFixed(4)}, {p.lng?.toFixed(4)}</div>
                 </div>
                 <div style={{ ...A.badge, background: p.resolved ? "#00FF8822" : "#FF2D2D22", color: p.resolved ? "#00FF88" : "#FF2D2D", border: `1px solid ${p.resolved ? "#00FF8844" : "#FF2D2D44"}` }}>{p.resolved ? "RESOLVED" : "ACTIVE"}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* CHECKPOINTS */}
+        {nav === "checkpoints" && (
+          <div>
+            <div style={A.sectionTitle}>CHECKPOINT REPORTS — {checkpoints.length} TOTAL</div>
+            {checkpoints.length === 0 && <div style={{ color:"#333", textAlign:"center", padding:40 }}>No checkpoint reports yet</div>}
+            {checkpoints.map(c => (
+              <div key={c.id} style={A.row}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:13 }}>{c.route}</div>
+                  <div style={{ color:"#555", fontSize:11, marginTop:2 }}>{c.description}</div>
+                  <div style={{ color:"#444", fontSize:10, marginTop:2 }}>{new Date(c.created_at).toLocaleString("en-NG")}</div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                  <div style={{ ...A.badge, background: c.approved ? "#00FF8822" : "#FFB80022", color: c.approved ? "#00FF88" : "#FFB800", border:`1px solid ${c.approved ? "#00FF8844" : "#FFB80044"}` }}>
+                    {c.approved ? "APPROVED" : "PENDING"}
+                  </div>
+                  {!c.approved && (
+                    <button onClick={async () => {
+                      await supabase.from("checkpoint_reports").update({ approved: true }).eq("id", c.id);
+                      setCheckpoints(prev => prev.map(r => r.id === c.id ? { ...r, approved: true } : r));
+                      showToast("Checkpoint approved!");
+                    }} style={{ ...A.smBtn, color:"#00FF88", borderColor:"#00FF8844", fontSize:9 }}>✓ Approve</button>
+                  )}
+                  <button onClick={async () => {
+                    await supabase.from("checkpoint_reports").delete().eq("id", c.id);
+                    setCheckpoints(prev => prev.filter(r => r.id !== c.id));
+                    showToast("Report deleted", "#FF2D2D");
+                  }} style={{ ...A.smBtn, color:"#FF2D2D", borderColor:"#FF2D2D44", fontSize:9 }}>🗑 Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* PENDING NEWS */}
+        {nav === "pending" && (
+          <div>
+            <div style={A.sectionTitle}>PENDING NEWS — {pendingNews.length} AWAITING APPROVAL</div>
+            {pendingNews.length === 0 && <div style={{ color:"#333", textAlign:"center", padding:40 }}>No pending news submissions</div>}
+            {pendingNews.map(n => (
+              <div key={n.id} style={A.row}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:700, fontSize:13 }}>{n.headline}</div>
+                  <div style={{ color:"#555", fontSize:11, marginTop:2 }}>📍 {n.state} · {n.category}</div>
+                  <div style={{ color:"#666", fontSize:11, marginTop:2 }}>{n.body}</div>
+                  <div style={{ color:"#444", fontSize:10, marginTop:2 }}>{new Date(n.created_at).toLocaleString("en-NG")}</div>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                  <button onClick={async () => {
+                    await supabase.from("security_news").update({ status: "approved" }).eq("id", n.id);
+                    setPendingNews(prev => prev.filter(p => p.id !== n.id));
+                    showToast("News approved!");
+                  }} style={{ ...A.smBtn, color:"#00FF88", borderColor:"#00FF8844", fontSize:9 }}>✓ Approve</button>
+                  <button onClick={async () => {
+                    await supabase.from("security_news").delete().eq("id", n.id);
+                    setPendingNews(prev => prev.filter(p => p.id !== n.id));
+                    showToast("News rejected", "#FF2D2D");
+                  }} style={{ ...A.smBtn, color:"#FF2D2D", borderColor:"#FF2D2D44", fontSize:9 }}>✗ Reject</button>
+                </div>
               </div>
             ))}
           </div>
