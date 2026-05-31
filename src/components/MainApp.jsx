@@ -606,7 +606,7 @@ const fetchFamily = async () => {
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"}) : "Not yet", battery:100, location: m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : m.phone, name: m.nickname, hasGps: !!(m.last_lat && m.last_lng), gpsAddress: null})).map(m => (
+          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"}) : "Not yet", battery:100, location: m.location || (m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : m.phone), name: m.nickname, hasGps: !!(m.last_lat && m.last_lng)})).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
