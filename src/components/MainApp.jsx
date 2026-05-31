@@ -2185,7 +2185,7 @@ function NewsScreen({ session }) {
   }));
   const allNews = [...liveNews.map(n => ({ 
     ...n, 
-    time: n.created_at ? new Date(n.created_at).toLocaleString("en-NG") : n.time ? (() => { try { const d = new Date(n.time); return isNaN(d) ? "Recently" : d.toLocaleString("en-NG"); } catch { return "Recently"; }})() : "Recently"
+    time: n.created_at ? new Date(n.created_at).toLocaleString("en-NG") : n.time ? new Date(n.time).toLocaleString("en-NG") : "Recently"
   })), ...incidentNews];
   const filtered = newsFilter === "all" ? allNews
     : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
