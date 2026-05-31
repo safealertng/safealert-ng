@@ -2347,7 +2347,10 @@ function HeatMapScreen() {
   return (
     <div style={{ paddingBottom:28 }}>
       <div ref={mapRef} style={{ height:250, margin:"12px 16px 0", borderRadius:12, overflow:"hidden", zIndex:1 }} />
-      <div style={{ background:"#FF2D2D11", border:"1px solid #FF2D2D22", borderRadius:10, margin:"12px 16px 0", padding:14 }}>
+      <div style={{ background:"#FFB80010", border:"1px solid #FFB80033", borderRadius:8, margin:"12px 16px 0", padding:"10px 12px", fontSize:11, color:"#888", lineHeight:1.7 }}>
+          ⚠️ Risk levels are community-estimated based on historical data. Real-time incidents reported by users are shown on the map. Always verify with official sources.
+        </div>
+        <div style={{ background:"#FF2D2D11", border:"1px solid #FF2D2D22", borderRadius:10, margin:"12px 16px 0", padding:14 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
           <div style={{ fontWeight:900, fontSize:13, color:"#FF2D2D" }}>NATIONAL THREAT LEVEL: HIGH</div>
           <div style={{ fontSize:10, color:"#444", fontFamily:"monospace" }}>Updated: Today 08:00</div>
