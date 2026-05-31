@@ -1,43 +1,73 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const NEWS_API_KEY = Deno.env.get("NEWS_API_KEY") || "";
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  };
-
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
-    const url = `https://newsapi.org/v2/everything?q=nigeria+security+police+army+kidnap+bandit&language=en&sortBy=publishedAt&pageSize=20&apiKey=${NEWS_API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const queries = [
+      "Nigeria security attack",
+      "Nigeria kidnapping",
+      "Nigeria bandit",
+      "Nigeria police arrest",
+      "Nigeria army operation",
+    ];
 
-    const articles = data.articles?.map((a: any) => ({
-      id: a.url,
-      headline: a.title,
-      body: a.description || a.content || "",
-      state: "Nigeria",
-      category: "alert",
-      source: a.source?.name || "News",
-      urgent: false,
-      time: a.publishedAt,
-      url: a.url,
-      image: a.urlToImage,
-    })) || [];
+    const allArticles = [];
 
-    return new Response(
-      JSON.stringify({ articles }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    for (const query of queries) {
+      const encoded = encodeURIComponent(query + " Nigeria");
+      const rssUrl = `https://news.google.com/rss/search?q=${encoded}&hl=en-NG&gl=NG&ceid=NG:en`;
+      
+      const res = await fetch(rssUrl);
+      const xml = await res.text();
+
+      const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+      
+      for (const item of items.slice(0, 3)) {
+        const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] || 
+                      item.match(/<title>(.*?)<\/title>/)?.[1] || "";
+        const link = item.match(/<link>(.*?)<\/link>/)?.[1] || "";
+        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+        const source = item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "Google News";
+
+        if (title) {
+          allArticles.push({
+            id: Math.random().toString(36).substr(2, 9),
+            headline: title.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
+            source,
+            link,
+            time: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+            state: "Nigeria",
+            category: query.includes("kidnap") ? "kidnap" : 
+                      query.includes("bandit") ? "banditry" :
+                      query.includes("attack") ? "alert" : "alert",
+            urgent: false,
+            body: "",
+            from_api: true,
+          });
+        }
+      }
+    }
+
+    const seen = new Set();
+    const unique = allArticles.filter(a => {
+      if (seen.has(a.headline)) return false;
+      seen.add(a.headline);
+      return true;
+    });
+
+    return new Response(JSON.stringify({ articles: unique.slice(0, 20) }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+
+  } catch (err) {
+    return new Response(JSON.stringify({ articles: [], error: err.message }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   }
 });

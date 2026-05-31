@@ -2082,7 +2082,11 @@ function NewsScreen() {
                     {bookmarked.includes(item.id) ? "★" : "☆"}
                   </button>
                 </div>
-                {isOpen && <div style={{ fontSize:12, color:"#777", lineHeight:1.8, borderTop:"1px solid #111", paddingTop:10, marginTop:4 }}>{item.body}</div>}
+                {isOpen && <div style={{ fontSize:12, color:"#777", lineHeight:1.8, borderTop:"1px solid #111", paddingTop:10, marginTop:4 }}>
+                  {item.body ? item.body : item.link ? 
+                    <span>Read the full story on <a href={item.link} target="_blank" rel="noopener noreferrer" style={{ color:"#00FF88", fontWeight:700 }}>{item.source}</a></span> 
+                    : "No additional details available."}
+                </div>}
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:4 }}>
                   <button onClick={() => setExpanded(isOpen ? null : item.id)} style={{ background:"none", border:"none", color:"#FFB800", fontSize:11, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, padding:0 }}>
                     {isOpen ? "▲ Show less" : "▼ Read full report"}
