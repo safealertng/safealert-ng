@@ -1819,15 +1819,7 @@ function LiveAlertsScreen({ session }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHECKPOINT TRACKER
-  const CHECKPOINTS_DATA = [
-  { id:2, route:"Lagos–Ibadan Expressway", location:"Sagamu Interchange", type:"police", desc:"Highway Patrol — vehicle papers check", reports:89, mins:5, direction:"Northbound", severity:"low" },
-  { id:3, route:"Abuja–Lokoja Highway", location:"Gwagwalada Bridge", type:"police", desc:"Police stop — slow moving, extortion reports", reports:22, mins:25, direction:"Both", severity:"high" },
-  { id:4, route:"Enugu–Onitsha Expressway", location:"9th Mile Corner", type:"army", desc:"Army checkpoint — baggage inspection", reports:15, mins:18, direction:"Southbound", severity:"medium" },
-  { id:5, route:"Kano–Kaduna Road", location:"Maraban Jos", type:"bandits", desc:"REPORTED BANDIT ACTIVITY — AVOID THIS ROUTE", reports:7, mins:0, direction:"Both", severity:"critical" },
-  { id:6, route:"Benin–Ore Road", location:"Ofosu Community", type:"police", desc:"Police checkpoint — 2 officers, routine", reports:41, mins:8, direction:"Westbound", severity:"low" },
-  { id:7, route:"Port Harcourt–Aba Expressway", location:"Rumuola Flyover", type:"police", desc:"Traffic police — slow, documents check", reports:63, mins:15, direction:"Both", severity:"medium" },
-  { id:8, route:"Maiduguri–Damaturu Road", location:"Jakana Junction", type:"military", desc:"Military formation — full security sweep", reports:11, mins:40, direction:"Both", severity:"high" },
-];
+  const CHECKPOINTS_DATA = [];
 const CP_COLORS = { low:"#00FF88", medium:"#FFB800", high:"#FF6B00", critical:"#FF2D2D" };
 const CP_LABELS = { low:"LOW DELAY", medium:"MODERATE", high:"LONG DELAY", critical:"AVOID" };
 const CP_TYPE_ICON = { army:"⚔️", police:"🚔", military:"🪖", bandits:"💀" };
@@ -1889,7 +1881,11 @@ function CheckpointScreen() {
         ))}
       </div>
       <div style={{ display:"flex", gap:8, padding:"12px 16px 0" }}>
-        {[["🔴","3","Critical/High"],["🟡","4","Moderate"],["🟢","2","Clear"]].map(([ic,n,l]) => (
+        {[
+            ["🔴", String(filtered.filter(c=>c.severity==="critical"||c.severity==="high").length), "Critical/High"],
+            ["🟡", String(filtered.filter(c=>c.severity==="medium").length), "Moderate"],
+            ["🟢", String(filtered.filter(c=>c.severity==="low").length), "Clear"]
+          ].map(([ic,n,l]) => (
           <div key={l} style={{ flex:1, background:"#0d0d0d", border:"1px solid #161616", borderRadius:10, padding:"10px 8px", textAlign:"center" }}>
             <div style={{ fontSize:9 }}>{ic}</div>
             <div style={{ fontWeight:900, fontSize:20, color:"#fff", marginTop:2 }}>{n}</div>
@@ -1899,6 +1895,13 @@ function CheckpointScreen() {
       </div>
       <div style={{ padding:"12px 16px 0" }}>
         <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>ACTIVE CHECKPOINTS — {filtered.length} REPORTED</div>
+        {filtered.length === 0 && (
+          <div style={{ textAlign:"center", padding:40, color:"#333" }}>
+            <div style={{ fontSize:32 }}>🚧</div>
+            <div style={{ marginTop:10 }}>No checkpoint reports yet</div>
+            <div style={{ fontSize:11, color:"#2a2a2a", marginTop:6 }}>Be the first to report a checkpoint on your route</div>
+          </div>
+        )}
         {filtered.map(cp => {
           const col = CP_COLORS[cp.severity];
           const isOpen = expanded === cp.id;
