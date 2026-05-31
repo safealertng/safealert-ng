@@ -2262,6 +2262,23 @@ const STATES_RISK = [
 const ZONE_FULL = { NW:"North West", NE:"North East", NC:"North Central", SW:"South West", SS:"South South", SE:"South East" };
 
 function HeatMapScreen() {
+  const [gdeltData, setGdeltData] = useState({});
+  const [gdeltLoading, setGdeltLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGdelt = async () => {
+      try {
+        const res = await fetch(
+          "https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/fetch-news?type=safety",
+          { headers: { "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr" } }
+        );
+        const data = await res.json();
+        if (data.stateData) setGdeltData(data.stateData);
+      } catch(e) { console.error("GDELT error:", e); }
+      setGdeltLoading(false);
+    };
+    fetchGdelt();
+  }, []);
   const [hmFilter, setHmFilter] = useState("all");
   const [sortBy, setSortBy] = useState("risk");
   const [selectedState, setSelectedState] = useState(null);
@@ -2341,7 +2358,15 @@ function HeatMapScreen() {
   const RISK_LABELS = { 1:"LOW", 2:"MODERATE", 3:"HIGH", 4:"CRITICAL" };
   const TREND_ICON = { rising:"↑", declining:"↓", stable:"→" };
   const TREND_COL = { rising:"#FF2D2D", declining:"#00FF88", stable:"#FFB800" };
-  const filtered = hmFilter === "all" ? STATES_RISK : STATES_RISK.filter(s => s.zone === hmFilter);
+  // filtered is defined above with GDELT data
+  // Merge GDELT real data with static risk estimates
+  const enrichedStates = STATES_RISK.map(s => {
+    const realCount = gdeltData[s.state] || 0;
+    const totalIncidents = s.incidents + realCount;
+    const realRisk = realCount > 5 ? 4 : realCount > 3 ? 3 : realCount > 1 ? 2 : s.risk;
+    return { ...s, incidents: totalIncidents, risk: realCount > 0 ? realRisk : s.risk, hasRealData: realCount > 0 };
+  });
+  const filtered = hmFilter === "all" ? enrichedStates : enrichedStates.filter(s => s.zone === hmFilter);
   const sorted = [...filtered].sort((a,b) => sortBy === "risk" ? b.risk - a.risk : sortBy === "incidents" ? b.incidents - a.incidents : a.state.localeCompare(b.state));
   const counts = [1,2,3,4].reduce((acc,r) => ({ ...acc, [r]: STATES_RISK.filter(s=>s.risk===r).length }), {});
   return (

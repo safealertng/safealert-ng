@@ -8,7 +8,46 @@ const CORS = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
+  const url = new URL(req.url);
+  const type = url.searchParams.get("type") || "news";
+
   try {
+    if (type === "safety") {
+      // GDELT — real security incidents in Nigeria by state
+      const nigerianStates = [
+        "Lagos","Abuja","Kano","Kaduna","Rivers","Borno","Zamfara",
+        "Katsina","Sokoto","Anambra","Imo","Oyo","Delta","Edo",
+        "Plateau","Niger","Benue","Enugu","Kwara","Kogi","Ogun",
+        "Ondo","Ekiti","Osun","Cross River","Akwa Ibom","Bayelsa",
+        "Taraba","Adamawa","Gombe","Bauchi","Yobe","Jigawa","Kebbi",
+        "Nasarawa","Ebonyi","Abia"
+      ];
+
+      const stateData: Record<string, number> = {};
+
+      // Query GDELT for recent Nigeria security events
+      const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=Nigeria+security+attack+kidnap+bandit&mode=artlist&maxrecords=250&format=json&timespan=7d`;
+      
+      const res = await fetch(gdeltUrl);
+      const data = await res.json();
+
+      if (data.articles) {
+        for (const article of data.articles) {
+          const title = (article.title || "").toLowerCase();
+          for (const state of nigerianStates) {
+            if (title.includes(state.toLowerCase())) {
+              stateData[state] = (stateData[state] || 0) + 1;
+            }
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ stateData, source: "GDELT", updated: new Date().toISOString() }), {
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+
+    // Default — Google News RSS feed
     const queries = [
       "Nigeria security attack",
       "Nigeria kidnapping",
@@ -66,7 +105,7 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ articles: [], error: err.message }), {
+    return new Response(JSON.stringify({ articles: [], stateData: {}, error: err.message }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   }
