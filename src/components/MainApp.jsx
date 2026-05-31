@@ -1833,14 +1833,51 @@ const CP_LABELS = { low:"LOW DELAY", medium:"MODERATE", high:"LONG DELAY", criti
 const CP_TYPE_ICON = { army:"⚔️", police:"🚔", military:"🪖", bandits:"💀" };
 
 function CheckpointScreen() {
+  const [liveCheckpoints, setLiveCheckpoints] = useState([]);
+
+  useEffect(() => {
+    const fetchCheckpoints = async () => {
+      const { data } = await supabase
+        .from("checkpoint_reports")
+        .select("*")
+        .eq("approved", true)
+        .order("created_at", { ascending: false });
+      if (data) setLiveCheckpoints(data);
+    };
+    fetchCheckpoints();
+
+    const channel = supabase
+      .channel("checkpoints-live")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "checkpoint_reports" },
+        (payload) => {
+          if (payload.new.approved) {
+            setLiveCheckpoints(prev => [payload.new, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
   const [cpFilter, setCpFilter] = useState("all");
   const [myReport, setMyReport] = useState("");
   const [myRoute, setMyRoute] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [expanded, setExpanded] = useState(null);
-  const filtered = cpFilter === "all" ? CHECKPOINTS_DATA
-    : cpFilter === "danger" ? CHECKPOINTS_DATA.filter(c => c.severity === "critical" || c.severity === "high")
-    : CHECKPOINTS_DATA.filter(c => c.type === cpFilter);
+  const realCheckpoints = liveCheckpoints.map(c => ({
+    id: c.id,
+    route: c.route,
+    location: c.location || c.route,
+    type: c.type || "police",
+    desc: c.description,
+    reports: 1,
+    mins: 0,
+    direction: "Both",
+    severity: c.severity || "medium",
+  }));
+  const allCheckpoints = [...realCheckpoints, ...CHECKPOINTS_DATA];
+  const filtered = cpFilter === "all" ? allCheckpoints
+    : cpFilter === "danger" ? allCheckpoints.filter(c => c.severity === "critical" || c.severity === "high")
+    : allCheckpoints.filter(c => c.type === cpFilter);
   return (
     <div style={{ paddingBottom:28 }}>
       <div style={{ background:"#FFB80010", border:"1px solid #FFB80033", borderRadius:10, margin:"12px 16px 0", padding:12, fontSize:11, color:"#888", lineHeight:1.7 }}>
