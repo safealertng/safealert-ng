@@ -2438,7 +2438,10 @@ function HeatMapScreen() {
                 <div style={{ width:4, height:isSelected?50:36, borderRadius:2, background:col, flexShrink:0, transition:"height 0.2s" }} />
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontWeight:800, fontSize:13 }}>{s.state}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontWeight:800, fontSize:13 }}>{s.state}</span>
+                      {s.hasRealData && <span style={{ fontSize:8, fontWeight:900, padding:"2px 6px", borderRadius:4, background:"#00FF8822", color:"#00FF88", border:"1px solid #00FF8844", letterSpacing:1 }}>● LIVE</span>}
+                    </div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ fontSize:11, color:TREND_COL[s.trend], fontWeight:700 }}>{TREND_ICON[s.trend]} {s.trend}</span>
                       <span style={{ fontSize:9, fontWeight:700, padding:"2px 6px", borderRadius:4, background:col+"22", color:col, border:`1px solid ${col}44` }}>{RISK_LABELS[s.risk]}</span>
