@@ -599,7 +599,10 @@ const fetchFamily = async () => {
           </div>
           <div style={{ display:"flex", gap:10, marginTop:10 }}>
             <button style={{ ...S.redBtn, flex:1, fontSize:12 }} onClick={() => window.open(`tel:${selectedMember.phone}`)}>📞 Call Now</button>
-            <button style={{ ...S.redBtn, flex:1, fontSize:12, background:"#1a1a1a", boxShadow:"none", color:"#ccc" }}>💬 Send Alert</button>
+            <button onClick={() => {
+              const msg = `🚨 SAFEALERT NG — FAMILY SAFETY CHECK\n\nHi ${selectedMember.nickname}, your family member is checking on your safety.\n\nPlease reply to confirm you are safe. 🛡️\n\nSent via SafeAlert NG`;
+              window.open(`https://wa.me/${selectedMember.phone?.replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`);
+            }} style={{ ...S.redBtn, flex:1, fontSize:12, background:"#25D36622", boxShadow:"none", color:"#25D366", border:"1px solid #25D36644" }}>💬 Send Alert</button>
             <button onClick={() => { deleteFamilyMember(selectedMember.id); setSelectedMember(null); }} style={{ ...S.redBtn, flex:1, fontSize:12, background:"#1a1a1a", boxShadow:"none", color:"#FF2D2D", border:"1px solid #FF2D2D33" }}>🗑️ Remove</button>
           </div>
         </div>
@@ -2180,7 +2183,10 @@ function NewsScreen({ session }) {
     time: new Date(i.created_at).toLocaleString("en-NG"),
     from_incident: true,
   }));
-  const allNews = [...liveNews.map(n => ({ ...n, time: new Date(n.created_at).toLocaleString("en-NG") })), ...incidentNews];
+  const allNews = [...liveNews.map(n => ({ 
+    ...n, 
+    time: n.created_at ? new Date(n.created_at).toLocaleString("en-NG") : n.time || "Recently"
+  })), ...incidentNews];
   const filtered = newsFilter === "all" ? allNews
     : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
     : allNews.filter(n => n.category === newsFilter);
