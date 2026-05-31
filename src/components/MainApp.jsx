@@ -142,9 +142,9 @@ const agoraVideoRef = useRef(null);
   const fetchFamily = async () => {
     const { data, error } = await supabase
       .from("family_members")
-      .select("*")
-      .eq("user_id", session?.user?.id);
-    if (!error && data) setRealFamily(data);
+      .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
+      .eq("owner_id", session?.user?.id);
+    if (!error && data) setFamilyMembers(data);
   };
 
   const addFamilyMember = async () => {
