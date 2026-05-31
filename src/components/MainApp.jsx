@@ -357,7 +357,7 @@ const fetchFamily = async () => {
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [voiceTime, setVoiceTime] = useState(0);
   const [realFamily, setRealFamily] = useState([]);
-  const [mediaRecorderRef] = useState({ current: null });
+  const mediaRecorderRef = useRef(null);
   const [recordedChunks, setRecordedChunks] = useState([]);
   const [videoSaved, setVideoSaved] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
