@@ -278,15 +278,46 @@ const fetchFamily = async () => {
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" }
+        video: { facingMode: "user" }, audio: true
       });
       setStream(mediaStream);
+      setRecordedChunks([]);
+      setVideoSaved(false);
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
           videoRef.current.play();
         }
       }, 500);
+
+      // Start recording
+      try {
+        const recorder = new MediaRecorder(mediaStream, { mimeType: "video/webm" });
+        const chunks = [];
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: "video/webm" });
+          const fileName = `panic-${session?.user?.id}-${Date.now()}.webm`;
+          const { error } = await supabase.storage.from("incident-videos").upload(fileName, blob, { contentType: "video/webm" });
+          if (!error) {
+            const { data: urlData } = supabase.storage.from("incident-videos").getPublicUrl(fileName);
+            await supabase.from("incidents").insert({
+              reporter_id: session?.user?.id,
+              type: "panic_video",
+              description: `Live panic broadcast recording — ${new Date().toLocaleString("en-NG")}`,
+              lat: userCoords?.lat || 0,
+              lng: userCoords?.lng || 0,
+              state: userLocation || "Unknown",
+              status: "active",
+              video_url: urlData.publicUrl,
+            });
+            setVideoSaved(true);
+          }
+        };
+        recorder.start();
+        mediaRecorderRef.current = recorder;
+      } catch(e) { console.error("Recording error:", e); }
+
     } catch (err) {
       console.error("Camera access denied:", err);
     }
@@ -326,6 +357,9 @@ const fetchFamily = async () => {
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [voiceTime, setVoiceTime] = useState(0);
   const [realFamily, setRealFamily] = useState([]);
+  const [mediaRecorderRef] = useState({ current: null });
+  const [recordedChunks, setRecordedChunks] = useState([]);
+  const [videoSaved, setVideoSaved] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
@@ -456,7 +490,11 @@ const fetchFamily = async () => {
           <RespRow key={e.num} icon={e.icon} title={e.name} sub={e.num} ok={dispatched} />
         )}
       </Section>
-      <button style={S.ghostBtn} onClick={endBroadcast}>END BROADCAST</button>
+      <div style={{ display:"flex", gap:10, margin:"0 16px" }}>
+        <button style={{ ...S.ghostBtn, flex:1, margin:0, color:"#FF2D2D", borderColor:"#FF2D2D33" }} onClick={() => { mediaRecorderRef.current?.stop(); }}>⏹ Stop Recording</button>
+        <button style={{ ...S.ghostBtn, flex:1, margin:0 }} onClick={endBroadcast}>END BROADCAST</button>
+      </div>
+      {videoSaved && <OKBox title="VIDEO SAVED" sub="Recording saved to incident feed ✅" />}
     </Shell>
   );
 
