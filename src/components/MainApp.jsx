@@ -758,7 +758,7 @@ const agoraVideoRef = useRef(null);
   if (nav === "news") return (
     <Shell shakeFlash={false}>
       <TopBar title="SECURITY NEWS" onBack={() => setNav("home")} />
-      <NewsScreen />
+      <NewsScreen session={session} />
     </Shell>
   );
 
@@ -1938,7 +1938,7 @@ const NEWS_DATA = [];
 const CAT_COLORS = { banditry:"#FF6B00", terrorism:"#FF2D2D", robbery:"#9B59B6", alert:"#FFB800", cult:"#E74C3C", kidnap:"#FF2D2D" };
 const CAT_ICONS = { banditry:"🏕️", terrorism:"💣", robbery:"🔫", alert:"📢", cult:"⚔️", kidnap:"🚨" };
 
-function NewsScreen() {
+function NewsScreen({ session }) {
   const [incidents, setIncidents] = useState([]);
 
   useEffect(() => {
