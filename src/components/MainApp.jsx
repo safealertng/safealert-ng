@@ -1825,6 +1825,29 @@ const CP_LABELS = { low:"LOW DELAY", medium:"MODERATE", high:"LONG DELAY", criti
 const CP_TYPE_ICON = { army:"⚔️", police:"🚔", military:"🪖", bandits:"💀" };
 
 function CheckpointScreen() {
+  const [checkpointNews, setCheckpointNews] = useState([]);
+
+  useEffect(() => {
+    const fetchCheckpointNews = async () => {
+      try {
+        const res = await fetch(
+          "https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/fetch-news",
+          { headers: { "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr" } }
+        );
+        const data = await res.json();
+        if (data.articles) {
+          const cpNews = data.articles.filter(a =>
+            a.headline?.toLowerCase().includes("checkpoint") ||
+            a.headline?.toLowerCase().includes("police stop") ||
+            a.headline?.toLowerCase().includes("road block") ||
+            a.headline?.toLowerCase().includes("security check")
+          );
+          setCheckpointNews(cpNews);
+        }
+      } catch(e) { console.error("Checkpoint news error:", e); }
+    };
+    fetchCheckpointNews();
+  }, []);
   const [liveCheckpoints, setLiveCheckpoints] = useState([]);
 
   useEffect(() => {
@@ -1894,7 +1917,10 @@ function CheckpointScreen() {
         ))}
       </div>
       <div style={{ padding:"12px 16px 0" }}>
-        <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>ACTIVE CHECKPOINTS — {filtered.length} REPORTED</div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", fontFamily:"monospace" }}>ACTIVE CHECKPOINTS — {filtered.length} REPORTED</div>
+          <div style={{ fontSize:9, color:"#333", fontFamily:"monospace" }}>🕐 Updated: {new Date().toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"})}</div>
+        </div>
         {filtered.length === 0 && (
           <div style={{ textAlign:"center", padding:40, color:"#333" }}>
             <div style={{ fontSize:32 }}>🚧</div>
@@ -1927,7 +1953,7 @@ function CheckpointScreen() {
                       <div style={{ display:"flex", gap:8, marginTop:8 }}>
                         <button onClick={e => e.stopPropagation()} style={{ flex:1, background:"#FFB80022", border:"1px solid #FFB80044", borderRadius:8, padding:"7px", fontSize:11, color:"#FFB800", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>✓ Still Active</button>
                         <button onClick={e => e.stopPropagation()} style={{ flex:1, background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:8, padding:"7px", fontSize:11, color:"#00FF88", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>✗ Cleared</button>
-                        <button onClick={e => { e.stopPropagation(); window.open(`https://wa.me/?text=🚧 CHECKPOINT ALERT via SafeAlert NG:\n\n📍 ${cp.location}\n🛣️ ${cp.route}\n⏱️ ~${cp.mins > 0 ? cp.mins+"min delay" : "No delay"}\n👥 ${cp.reports} reports\n↔️ ${cp.direction}\n\nℹ️ ${cp.desc}\n\nStay safe! 🇳🇬🛡️`); }} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:8, padding:"7px", fontSize:11, color:"#25D366", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📤 Share</button>
+                        <button onClick={e => { e.stopPropagation(); window.open(`https://wa.me/?text=🚧 CHECKPOINT ALERT via SafeAlert NG:\n\n📍 ${cp.location || cp.route}\n🛣️ ${cp.route}\n⏱️ ~${cp.mins > 0 ? cp.mins+"min delay" : "No delay"}\n👥 ${cp.reports} reports\n↔️ ${cp.direction}\n\nℹ️ ${cp.desc}\n\n⚠️ Stay safe! Download SafeAlert NG 🇳🇬🛡️`); }} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:8, padding:"7px", fontSize:11, color:"#25D366", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📤 WhatsApp</button>
                       </div>
                     </div>
                   )}
@@ -1938,6 +1964,20 @@ function CheckpointScreen() {
         })}
       </div>
       <div style={{ margin:"8px 16px 0", background:"#0a0a0a", border:"1px solid #1e1e1e", borderRadius:12, padding:14 }}>
+        {checkpointNews.length > 0 && (
+          <div style={{ margin:"8px 0", background:"#0a0a0a", border:"1px solid #1a1a1a", borderRadius:12, padding:14 }}>
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>📰 CHECKPOINT NEWS FEED</div>
+            {checkpointNews.map((n, i) => (
+              <div key={i} style={{ borderBottom:"1px solid #111", paddingBottom:8, marginBottom:8 }}>
+                <div style={{ fontSize:12, color:"#ccc", fontWeight:600, lineHeight:1.5 }}>{n.headline}</div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+                  <span style={{ fontSize:10, color:"#444" }}>📡 {n.source}</span>
+                  {n.link && <a href={n.link} target="_blank" rel="noopener noreferrer" style={{ fontSize:10, color:"#00FF88", fontWeight:700 }}>Read →</a>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>REPORT A NEW CHECKPOINT</div>
         {submitted ? (
           <div style={{ background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:8, padding:12, textAlign:"center" }}>
