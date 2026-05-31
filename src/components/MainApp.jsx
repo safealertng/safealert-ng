@@ -440,13 +440,15 @@ const fetchFamily = async () => {
   const cancelPanic = () => { setPanicStage("idle"); setPanicCount(5); clearTimeout(countRef.current); };
 
   const endBroadcast = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
     stopCamera();
     setPanicStage("idle"); setPanicCount(5);
     setRecordTime(0); setUploadPct(0); setDispatched(false);
     clearInterval(recRef.current); clearInterval(upRef.current);
     setReportStage("form"); setSelectedIncident(null);
   };
-
   const copyNumber = (num, id) => {
     navigator.clipboard?.writeText(num).catch(() => {});
     setCopied(id); setTimeout(() => setCopied(null), 2000);
@@ -1909,6 +1911,42 @@ function LiveAlertsScreen({ session }) {
                     {dist && <span style={{ fontSize:10, color:"#FFB800", fontWeight:700 }}>📏 {dist} km away</span>}
                     {inc.description && <span style={{ fontSize:10, color:"#555" }}>{inc.description}</span>}
                   </div>
+                  {inc.video_url && (
+  <div style={{ marginTop:10, borderRadius:10, overflow:"hidden", border:"1px solid #FF2D2D22" }}>
+    <video
+      src={inc.video_url}
+      controls
+      playsInline
+      style={{ width:"100%", maxHeight:200, background:"#000", display:"block" }}
+    />
+    <div style={{ background:"#0a0a0a", padding:"4px 10px", fontSize:10, color:"#555" }}>
+      📹 Incident recording
+    </div>
+  </div>
+)}
+<div style={{ marginTop:10 }}>
+  <div style={{ fontSize:9, color:"#444", letterSpacing:2, fontFamily:"monospace", marginBottom:6 }}>REPORT TO AGENCIES VIA WHATSAPP</div>
+  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+    {[
+      { name:"🚔 Police", number:"2349199" },
+      { name:"🛡️ DSS",    number:"2348039003044" },
+      { name:"⚔️ NSCDC",  number:"234112" },
+      { name:"🪖 Army",   number:"234193" },
+    ].map(agency => (
+      <a
+        key={agency.name}
+        href={`https://wa.me/${agency.number}?text=${encodeURIComponent(
+          `🚨 EMERGENCY ALERT — SafeAlertNG\n\nType: ${inc.type?.replace(/_/g," ")}\nLocation: ${inc.state}\nTime: ${new Date(inc.created_at).toLocaleString("en-NG")}\n${inc.description ? `Details: ${inc.description}\n` : ""}${inc.video_url ? `Video: ${inc.video_url}\n` : ""}\nReported via SafeAlertNG`
+        )}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display:"inline-flex", alignItems:"center", gap:5, background:"#25D36622", border:"1px solid #25D36644", borderRadius:20, padding:"5px 12px", fontSize:11, color:"#25D366", fontWeight:700, textDecoration:"none", fontFamily:"'Barlow Condensed',sans-serif" }}
+      >
+        {agency.name}
+      </a>
+    ))}
+  </div>
+</div>
                   {isActive && !inc.id?.toString().startsWith("sample") && (
                     <button onClick={() => markResolved(inc.id)} style={{ marginTop:10, background:"#00FF8810", border:"1px solid #00FF8833", borderRadius:6, padding:"5px 12px", fontSize:11, color:"#00FF88", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>✓ Mark Resolved</button>
                   )}
