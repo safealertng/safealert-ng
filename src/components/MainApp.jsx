@@ -119,6 +119,27 @@ export default function MainApp({ session }) {
       );
     }
   }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
+  // Update family member location every 5 minutes
+  useEffect(() => {
+    const updateLocation = async () => {
+      if (!session?.user?.id) return;
+      navigator.geolocation?.getCurrentPosition(async (pos) => {
+        const { lat, lng } = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        await supabase
+          .from('family_members')
+          .update({ 
+            last_lat: lat, 
+            last_lng: lng, 
+            last_seen: new Date().toISOString() 
+          })
+          .eq('member_user_id', session.user.id);
+      });
+    };
+
+    updateLocation();
+    const interval = setInterval(updateLocation, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [session]);
   useEffect(() => {
   const loadFamily = async () => {
     const { data: { session } } = await supabase.auth.getSession();
