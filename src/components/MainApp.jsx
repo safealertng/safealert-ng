@@ -314,7 +314,7 @@ const fetchFamily = async () => {
             setVideoSaved(true);
           }
         };
-        recorder.start();
+        recorder.start(1000);
         mediaRecorderRef.current = recorder;
       } catch(e) { console.error("Recording error:", e); }
 
@@ -441,7 +441,8 @@ const fetchFamily = async () => {
 
   const endBroadcast = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.requestData();
+mediaRecorderRef.current.stop();
     }
     stopCamera();
     setPanicStage("idle"); setPanicCount(5);
@@ -517,7 +518,12 @@ const fetchFamily = async () => {
       <div style={{ display:"flex", gap:10, margin:"0 16px" }}>
         <button style={{ ...S.ghostBtn, flex:1, margin:0, color:"#FF2D2D", borderColor:"#FF2D2D33" }} onClick={() => { 
   if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-    mediaRecorderRef.current.stop();
+    onClick={() => { 
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    mediaRecorderRef.current.requestData();
+    setTimeout(() => mediaRecorderRef.current.stop(), 300);
+  }
+}}
   }
 }}>⏹ Stop Recording</button>
         <button style={{ ...S.ghostBtn, flex:1, margin:0 }} onClick={endBroadcast}>END BROADCAST</button>
