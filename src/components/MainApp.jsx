@@ -119,12 +119,25 @@ export default function MainApp({ session }) {
       );
     }
   }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
-  // Update family member location every 5 minutes
+  // GPS tracking — auto-link by phone + update location every 5 minutes
   useEffect(() => {
     const updateLocation = async () => {
       if (!session?.user?.id) return;
       navigator.geolocation?.getCurrentPosition(async (pos) => {
-        const { lat, lng } = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const userPhone = session.user?.user_metadata?.phone;
+
+        // Auto-link member_user_id by phone number
+        if (userPhone) {
+          await supabase
+            .from('family_members')
+            .update({ member_user_id: session.user.id })
+            .eq('phone', userPhone)
+            .is('member_user_id', null);
+        }
+
+        // Update location where member_user_id matches
         await supabase
           .from('family_members')
           .update({ 
@@ -133,6 +146,17 @@ export default function MainApp({ session }) {
             last_seen: new Date().toISOString() 
           })
           .eq('member_user_id', session.user.id);
+
+        // Also update owner's own location in their family records
+        await supabase
+          .from('family_members')
+          .update({ 
+            last_lat: lat, 
+            last_lng: lng, 
+            last_seen: new Date().toISOString() 
+          })
+          .eq('owner_id', session.user.id)
+          .eq('nickname', session.user?.user_metadata?.full_name || '');
       });
     };
 
@@ -563,7 +587,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ?? "Live", battery:100, location:m.phone, name: m.nickname})).map(m => (
+          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"}) : "Not yet", battery:100, location: m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : m.phone, name: m.nickname})).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
