@@ -80,7 +80,7 @@ serve(async (req) => {
             headline: title.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
             source,
             link,
-            time: pubDate || new Date().toUTCString(),
+            time: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
             state: "Nigeria",
             category: query.includes("kidnap") ? "kidnap" : 
                       query.includes("bandit") ? "banditry" :
