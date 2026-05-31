@@ -2048,7 +2048,10 @@ function NewsScreen() {
         </div>
       )}
 
-      <div style={{ display:"flex", gap:6, padding:"10px 16px 0", overflowX:"auto" }}>
+      <div style={{ margin:"10px 16px 0", background:"#FFB80010", border:"1px solid #FFB80033", borderRadius:8, padding:"10px 12px", fontSize:11, color:"#888", lineHeight:1.7 }}>
+          ⚠️ All news is posted by verified admins only. Always verify with official sources before acting on any report.
+        </div>
+        <div style={{ display:"flex", gap:6, padding:"10px 16px 0", overflowX:"auto" }}>
         {[["all","All News"],["urgent","🔴 Urgent"],["banditry","Banditry"],["terrorism","Terror"],["robbery","Robbery"],["kidnap","Kidnap"],["alert","Advisories"]].map(([v,l]) => (
           <button key={v} onClick={() => setNewsFilter(v)} style={{ flexShrink:0, borderRadius:20, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", background:newsFilter===v?"#ffffff18":"#0d0d0d", color:newsFilter===v?"#fff":"#555", border:`1px solid ${newsFilter===v?"#ffffff33":"#1a1a1a"}` }}>{l}</button>
         ))}
