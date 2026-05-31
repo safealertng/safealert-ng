@@ -174,7 +174,14 @@ export default function MainApp({ session }) {
       .eq('owner_id', session.user.id);
     if (error) { console.error('Family fetch error:', error.message); return; }
     console.log('Family members loaded:', data);
-    setFamilyMembers(data ?? []);
+    const enriched = await Promise.all((data ?? []).map(async m => {
+      if (m.last_lat && m.last_lng) {
+        const address = await reverseGeocode(m.last_lat, m.last_lng);
+        return { ...m, location: address };
+      }
+      return { ...m, location: m.phone };
+    }));
+    setFamilyMembers(enriched);
   };
   loadFamily();
 }, []);
@@ -184,7 +191,19 @@ export default function MainApp({ session }) {
   const [nearbyAlerts, setNearbyAlerts] = useState([]);
 const agoraVideoRef = useRef(null);
 
-  const fetchFamily = async () => {
+const reverseGeocode = async (lat, lng) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`,
+        { headers: { "User-Agent": "SafeAlertNG/1.0" } }
+      );
+      const data = await res.json();
+      const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
+      const state = data.address?.state || "";
+      return city && state ? `${city}, ${state}` : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    } catch { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
+  };  
+const fetchFamily = async () => {
     const { data, error } = await supabase
       .from("family_members")
       .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
@@ -571,7 +590,7 @@ const agoraVideoRef = useRef(null);
             </div>
           </div>
           <div style={{ ...S.card, marginTop:10 }}>
-            {[["📍 Location", selectedMember.location],["🕐 Last Seen", selectedMember.lastSeen],["🔋 Battery", selectedMember.battery+"%", selectedMember.battery<20?"#FF6B00":"#00FF88"]].map(([l,v,c]) => (
+            {[["📍 GPS", selectedMember.last_lat && selectedMember.last_lng ? `${Number(selectedMember.last_lat).toFixed(6)}, ${Number(selectedMember.last_lng).toFixed(6)}` : "Not available"],["📍 Location", selectedMember.location],["🕐 Last Seen", selectedMember.lastSeen],["🔋 Battery", selectedMember.battery+"%", selectedMember.battery<20?"#FF6B00":"#00FF88"]].map(([l,v,c]) => (
               <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"7px 0", borderBottom:"1px solid #111" }}>
                 <span style={{ color:"#555", fontSize:12 }}>{l}</span>
                 <span style={{ color:c||"#ccc", fontSize:12, fontWeight:600 }}>{v}</span>
@@ -587,7 +606,7 @@ const agoraVideoRef = useRef(null);
       ) : (
         <div style={{ padding:"12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"}) : "Not yet", battery:100, location: m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : m.phone, name: m.nickname})).map(m => (
+          {familyMembers.map(m => ({...m, avatar:"👤", status:"safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", {hour:"2-digit", minute:"2-digit"}) : "Not yet", battery:100, location: m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : m.phone, name: m.nickname, hasGps: !!(m.last_lat && m.last_lng), gpsAddress: null})).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position:"relative" }}>
                 <span style={{ fontSize:32 }}>{m.avatar}</span>
