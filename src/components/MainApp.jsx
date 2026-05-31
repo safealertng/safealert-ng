@@ -1667,6 +1667,7 @@ function ProfileScreen({ session, onBack, onAdmin }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // LIVE ALERTS SCREEN — pulls real incidents from Supabase
 // ─────────────────────────────────────────────────────────────────────────────
+function NewsScreen2(){} // placeholder
 function LiveAlertsScreen({ session }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1938,6 +1939,19 @@ const CAT_COLORS = { banditry:"#FF6B00", terrorism:"#FF2D2D", robbery:"#9B59B6",
 const CAT_ICONS = { banditry:"🏕️", terrorism:"💣", robbery:"🔫", alert:"📢", cult:"⚔️", kidnap:"🚨" };
 
 function NewsScreen() {
+  const [incidents, setIncidents] = useState([]);
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      const { data } = await supabase
+        .from("incidents")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (data) setIncidents(data);
+    };
+    fetchIncidents();
+  }, []);
   const [newsFilter, setNewsFilter] = useState("all");
   const [expanded, setExpanded] = useState(null);
   const [bookmarked, setBookmarked] = useState([]);
@@ -1957,6 +1971,7 @@ function NewsScreen() {
       const { data, error } = await supabase
         .from("security_news")
         .select("*")
+        .eq("status", "approved")
         .order("created_at", { ascending: false })
         .limit(30);
       if (!error && data) setLiveNews(data);
@@ -1989,20 +2004,39 @@ function NewsScreen() {
   const postNews = async () => {
     if (!newHeadline || !newBody || !newState || !newCategory) return;
     setPosting(true);
+    const isAdmin = await supabase.from("admin_roles").select("role").eq("user_id", session?.user?.id);
+    const userIsAdmin = isAdmin.data && isAdmin.data.length > 0;
     const { error } = await supabase.from("security_news").insert({
       headline: newHeadline, body: newBody, state: newState,
       category: newCategory, source: newSource || "SafeAlert NG",
-      urgent: newUrgent
+      urgent: newUrgent,
+      status: userIsAdmin ? "approved" : "pending",
+      submitted_by: session?.user?.id,
     });
     setPosting(false);
     if (!error) {
       setNewHeadline(""); setNewBody(""); setNewState("");
       setNewCategory(""); setNewSource(""); setNewUrgent(false);
       setShowAddNews(false);
+      const isAdminUser = isAdmin.data && isAdmin.data.length > 0;
+      if (!isAdminUser) {
+        alert("✅ Your news has been submitted for admin review. It will appear once approved.");
+      }
     } else alert("Error: " + error.message);
   };
 
-  const allNews = [...liveNews.map(n => ({ ...n, time: new Date(n.created_at).toLocaleString("en-NG") }))];
+  const incidentNews = incidents.filter(i => i.show_in_news !== false).map(i => ({
+    id: `inc-${i.id}`,
+    headline: `${(i.type || "incident").replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())} reported in ${i.state || "Nigeria"}`,
+    body: i.description || "Community incident report submitted via SafeAlert NG.",
+    state: i.state || "Nigeria",
+    category: i.type || "alert",
+    source: "SafeAlert NG Community",
+    urgent: i.status === "active",
+    time: new Date(i.created_at).toLocaleString("en-NG"),
+    from_incident: true,
+  }));
+  const allNews = [...liveNews.map(n => ({ ...n, time: new Date(n.created_at).toLocaleString("en-NG") })), ...incidentNews];
   const filtered = newsFilter === "all" ? allNews
     : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
     : allNews.filter(n => n.category === newsFilter);
@@ -2017,7 +2051,7 @@ function NewsScreen() {
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <span style={{ fontSize:10, color:"#444", fontFamily:"monospace" }}>{filtered.length} reports</span>
-          <button onClick={() => setShowAddNews(!showAddNews)} style={{ background:"#FF2D2D22", border:"1px solid #FF2D2D44", borderRadius:6, padding:"4px 10px", fontSize:11, color:"#FF2D2D", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>+ Post News</button>
+          <button onClick={() => setShowAddNews(!showAddNews)} style={{ background:"#FF2D2D22", border:"1px solid #FF2D2D44", borderRadius:6, padding:"4px 10px", fontSize:11, color:"#FF2D2D", fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📰 Submit News</button>
         </div>
       </div>
 
