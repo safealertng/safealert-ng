@@ -2258,7 +2258,7 @@ function NewsScreen({ session }) {
                     <div style={{ fontSize:13, fontWeight:800, color:"#ddd", lineHeight:1.4 }}>{item.headline}</div>
                     <div style={{ display:"flex", gap:8, marginTop:5, flexWrap:"wrap" }}>
                       <span style={{ fontSize:10, color:col, fontWeight:700 }}>📍 {item.state}</span>
-                      <span style={{ fontSize:10, color:"#444" }}>🕐 {item.time}</span>
+                      <span style={{ fontSize:10, color:"#444" }}>🕐 {item.time && item.time !== "Invalid Date" ? item.time : "Recently"}</span>
                       <span style={{ fontSize:10, color:"#333" }}>📡 {item.source}</span>
                     </div>
                   </div>
