@@ -1933,16 +1933,7 @@ function CheckpointScreen() {
 // ─────────────────────────────────────────────────────────────────────────────
 // SECURITY NEWS FEED
 // ─────────────────────────────────────────────────────────────────────────────
-const NEWS_DATA = [
-  { id:1, state:"Kaduna", category:"banditry", headline:"Security forces repel bandit attack on Birnin Gwari community, 4 neutralised", time:"38 mins ago", source:"NAN", urgent:true, body:"Nigerian Army troops from Operation SAFE HAVEN repelled a bandit attack on Ungwan Dogo community in Birnin Gwari LGA. Four bandits were neutralised. Residents are advised to remain vigilant." },
-  { id:2, state:"Borno", category:"terrorism", headline:"MNJTF intercepts Boko Haram logistics convoy on Damboa Road", time:"1 hr ago", source:"Defence HQ", urgent:true, body:"Multinational Joint Task Force troops intercepted a Boko Haram logistics convoy on the Damboa-Maiduguri Road, recovering arms and foodstuffs. No civilian casualties recorded." },
-  { id:3, state:"Lagos", category:"robbery", headline:"Police arrest 11 suspected armed robbers operating on Third Mainland Bridge", time:"2 hrs ago", source:"Lagos Police", urgent:false, body:"Lagos State Police Command arrested 11 suspected armed robbers on the Third Mainland Bridge axis. Exhibits recovered include firearms and stolen vehicles." },
-  { id:4, state:"Abuja", category:"alert", headline:"DSS issues threat advisory for Abuja markets — stay alert", time:"3 hrs ago", source:"DSS", urgent:true, body:"The DSS has issued a threat advisory asking FCT residents to remain vigilant around major markets including Wuse, Garki and Maitama. Security presence has been increased." },
-  { id:5, state:"Katsina", category:"banditry", headline:"Governor imposes dusk-to-dawn curfew in Jibia and Danmusa LGAs", time:"4 hrs ago", source:"Katsina Govt", urgent:true, body:"Katsina State Government imposed a dusk-to-dawn curfew in Jibia and Danmusa LGAs following renewed bandit activity. Residents must remain indoors from 6pm to 6am." },
-  { id:6, state:"Rivers", category:"cult", headline:"Police neutralise 3 cult members in Rumuola as inter-cult clash fears rise", time:"5 hrs ago", source:"Rivers Police", urgent:false, body:"Rivers State Police Command neutralised three suspected cult members during a targeted operation in Rumuola, Port Harcourt." },
-  { id:7, state:"Zamfara", category:"banditry", headline:"NSCDC recovers 47 rustled cattle, arrests 2 suspects in Maru", time:"6 hrs ago", source:"NSCDC", urgent:false, body:"NSCDC operatives in Zamfara recovered 47 rustled cattle and arrested two suspects in Maru LGA. Victims have been reunited with their livestock." },
-  { id:8, state:"Enugu", category:"kidnap", headline:"Police rescue 4 kidnap victims in Igbo-Eze, suspects flee into forest", time:"8 hrs ago", source:"Enugu Police", urgent:false, body:"Enugu State Police Command rescued four kidnap victims in Igbo-Eze North LGA. The suspects fled into the forest but a manhunt is ongoing. Victims are receiving medical care." },
-];
+const NEWS_DATA = [];
 const CAT_COLORS = { banditry:"#FF6B00", terrorism:"#FF2D2D", robbery:"#9B59B6", alert:"#FFB800", cult:"#E74C3C", kidnap:"#FF2D2D" };
 const CAT_ICONS = { banditry:"🏕️", terrorism:"💣", robbery:"🔫", alert:"📢", cult:"⚔️", kidnap:"🚨" };
 
@@ -2011,7 +2002,7 @@ function NewsScreen() {
     } else alert("Error: " + error.message);
   };
 
-  const allNews = [...liveNews.map(n => ({ ...n, time: new Date(n.created_at).toLocaleString("en-NG") })), ...NEWS_DATA];
+  const allNews = [...liveNews.map(n => ({ ...n, time: new Date(n.created_at).toLocaleString("en-NG") }))];
   const filtered = newsFilter === "all" ? allNews
     : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
     : allNews.filter(n => n.category === newsFilter);
