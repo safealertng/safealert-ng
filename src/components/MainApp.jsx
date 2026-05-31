@@ -492,8 +492,34 @@ const fetchFamily = async () => {
           <RespRow key={e.num} icon={e.icon} title={e.name} sub={e.num} ok={dispatched} />
         )}
       </Section>
+      <div style={{ margin:"10px 16px 0" }}>
+        <div style={{ fontSize:9, color:"#444", letterSpacing:2, fontFamily:"monospace", marginBottom:8 }}>REPORT TO AGENCIES VIA WHATSAPP</div>
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+          {[
+            { name:"🚔 Police", number:"2349199" },
+            { name:"🛡️ DSS", number:"2348039003044" },
+            { name:"⚔️ NSCDC", number:"234112" },
+            { name:"🪖 Army", number:"234193" },
+          ].map(agency => (
+            
+              key={agency.name}
+              href={"https://wa.me/" + agency.number + "?text=" + encodeURIComponent("🚨 EMERGENCY ALERT — SafeAlertNG\n\nLocation: " + userLocation + "\nTime: " + new Date().toLocaleString("en-NG") + "\n\nReported via SafeAlertNG")}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:5, background:"#25D36622", border:"1px solid #25D36644", borderRadius:20, padding:"5px 12px", fontSize:11, color:"#25D366", fontWeight:700, textDecoration:"none", fontFamily:"'Barlow Condensed',sans-serif" }}
+            >
+              {agency.name}
+            </a>
+          ))}
+        </div>
+      </div>
+      
       <div style={{ display:"flex", gap:10, margin:"0 16px" }}>
-        <button style={{ ...S.ghostBtn, flex:1, margin:0, color:"#FF2D2D", borderColor:"#FF2D2D33" }} onClick={() => { mediaRecorderRef.current?.stop(); }}>⏹ Stop Recording</button>
+        <button style={{ ...S.ghostBtn, flex:1, margin:0, color:"#FF2D2D", borderColor:"#FF2D2D33" }} onClick={() => { 
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    mediaRecorderRef.current.stop();
+  }
+}}>⏹ Stop Recording</button>
         <button style={{ ...S.ghostBtn, flex:1, margin:0 }} onClick={endBroadcast}>END BROADCAST</button>
       </div>
       {videoSaved && <OKBox title="VIDEO SAVED" sub="Recording saved to incident feed ✅" />}
