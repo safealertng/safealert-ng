@@ -308,7 +308,7 @@ const fetchFamily = async () => {
   console.log("Video uploaded:", urlData.publicUrl);
   const { error: dbError } = await supabase.from("incidents").insert({
     reporter_id: session?.user?.id,
-    type: "panic_video",
+    type: "other",
     description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
     lat: userCoords?.lat || 0,
     lng: userCoords?.lng || 0,
