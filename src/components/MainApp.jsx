@@ -322,7 +322,6 @@ const fetchFamily = async () => {
 };
 recorder.start(1000);
 mediaRecorderRef.current = recorder;
-        mediaRecorderRef.current = recorder;
       } catch(e) { console.error("Recording error:", e); }
 
     } catch (err) {
@@ -451,13 +450,6 @@ mediaRecorderRef.current = recorder;
       mediaRecorderRef.current.requestData();
       setTimeout(() => {
         mediaRecorderRef.current.stop();
-        setTimeout(() => {
-          stopCamera();
-          setPanicStage("idle"); setPanicCount(5);
-          setRecordTime(0); setUploadPct(0); setDispatched(false);
-          clearInterval(recRef.current); clearInterval(upRef.current);
-          setReportStage("form"); setSelectedIncident(null);
-        }, 500);
       }, 300);
     } else {
       stopCamera();
