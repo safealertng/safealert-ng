@@ -250,9 +250,9 @@ export default function AdminDashboard({ session, onBack }) {
                       const pathParts = inc.video_url.split("/object/public/incident-videos/");
 const fileName = pathParts[1] || inc.video_url.split("/").pop();
                       await supabase.storage.from("incident-videos").remove([fileName]);
-                      await supabase.from("incidents").update({ video_url: null }).eq("id", inc.id);
-                      setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, video_url: null } : i));
-                      showToast("Video deleted", "#FF2D2D");
+                      await supabase.from("incidents").delete().eq("id", inc.id);
+                      setIncidents(prev => prev.filter(i => i.id !== inc.id));
+                      showToast("Incident & video deleted", "#FF2D2D");
                     }} style={{ ...A.smBtn, color: "#FF2D2D", borderColor: "#FF2D2D44", fontSize: 9 }}>🗑 Del Video</button>
                   )}
                 </div>

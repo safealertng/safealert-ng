@@ -89,7 +89,7 @@ const ZONE_COLORS = { "North West":"#4A90D9","North East":"#E67E22","North Centr
 export default function MainApp({ session }) {
   const [nav, setNav] = useState("home");
   const [familyMembers, setFamilyMembers] = useState([]);
-  const [userLocation, setUserLocation] = useState("{userLocation}");
+  const [userLocation, setUserLocation] = useState("Locating...");
   const [userCoords, setUserCoords] = useState(null);
 
   useEffect(() => {
@@ -312,7 +312,7 @@ const fetchFamily = async () => {
     description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
     lat: userCoords?.lat || 0,
     lng: userCoords?.lng || 0,
-    state: userLocation || "Unknown",
+    state: userLocation && userLocation !== "Locating..." ? userLocation : `${userCoords?.lat?.toFixed(4) || "0"}, ${userCoords?.lng?.toFixed(4) || "0"}`,
     status: "active",
     video_url: urlData.publicUrl,
   });
@@ -429,7 +429,7 @@ mediaRecorderRef.current = recorder;
         user_id: session?.user?.id,
         lat: userCoords?.lat || 0,
         lng: userCoords?.lng || 0,
-        state: userLocation || "Unknown",
+        state: userLocation && userLocation !== "Locating..." ? userLocation : `${userCoords?.lat?.toFixed(4) || "0"}, ${userCoords?.lng?.toFixed(4) || "0"}`,
         police_notified: true,
         resolved: false
       });
