@@ -501,7 +501,7 @@ const fetchFamily = async () => {
             { name:"🛡️ DSS", number:"2348039003044" },
             { name:"⚔️ NSCDC", number:"234112" },
             { name:"🪖 Army", number:"234193" },
-          ].map(agency => (
+          ].map(agency => ( <a
             
               key={agency.name}
               href={"https://wa.me/" + agency.number + "?text=" + encodeURIComponent("🚨 EMERGENCY ALERT — SafeAlertNG\n\nLocation: " + userLocation + "\nTime: " + new Date().toLocaleString("en-NG") + "\n\nReported via SafeAlertNG")}
@@ -512,9 +512,8 @@ const fetchFamily = async () => {
               {agency.name}
             </a>
           ))}
-        </div>
       </div>
-      
+      </div>
       <div style={{ display:"flex", gap:10, margin:"0 16px" }}>
         <button style={{ ...S.ghostBtn, flex:1, margin:0, color:"#FF2D2D", borderColor:"#FF2D2D33" }} onClick={() => {
   if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
