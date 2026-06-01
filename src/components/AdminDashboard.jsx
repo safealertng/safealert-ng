@@ -244,6 +244,16 @@ export default function AdminDashboard({ session, onBack }) {
                   {(adminRole === "super_admin" || adminRole === "admin" || adminRole === "moderator") && inc.status === "active" && (
                     <button onClick={() => updateIncidentStatus(inc.id, "resolved")} style={{ ...A.smBtn, color: "#00FF88", borderColor: "#00FF8844", fontSize: 9 }}>✓ Resolve</button>
                   )}
+                  {inc.video_url && (adminRole === "super_admin" || adminRole === "admin") && (
+                    <button onClick={async () => {
+                      if (!window.confirm("Delete this video?")) return;
+                      const fileName = inc.video_url.split("/incident-videos/")[1];
+                      await supabase.storage.from("incident-videos").remove([fileName]);
+                      await supabase.from("incidents").update({ video_url: null }).eq("id", inc.id);
+                      setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, video_url: null } : i));
+                      showToast("Video deleted", "#FF2D2D");
+                    }} style={{ ...A.smBtn, color: "#FF2D2D", borderColor: "#FF2D2D44", fontSize: 9 }}>🗑 Del Video</button>
+                  )}
                 </div>
               </div>
             ))}
