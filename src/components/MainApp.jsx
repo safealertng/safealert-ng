@@ -405,6 +405,17 @@ mediaRecorderRef.current = recorder;
   }, [session]);
 
   useEffect(() => {
+    if (videoSaved) {
+      stopCamera();
+      setPanicStage("idle"); setPanicCount(5);
+      setRecordTime(0); setUploadPct(0); setDispatched(false);
+      clearInterval(recRef.current); clearInterval(upRef.current);
+      setReportStage("form"); setSelectedIncident(null);
+      setTimeout(() => setVideoSaved(false), 500);
+    }
+  }, [videoSaved]);
+
+  useEffect(() => {
     const fetchNearbyAlerts = async () => {
       const { data, error } = await supabase
         .from("incidents")
