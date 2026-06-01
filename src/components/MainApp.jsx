@@ -312,7 +312,7 @@ const fetchFamily = async () => {
     description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
     lat: userCoords?.lat || 0,
     lng: userCoords?.lng || 0,
-    state: userLocation && userLocation !== "Locating..." && userLocation !== "{userLocation}" ? userLocation : userCoords ? `${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}` : "Unknown",
+    state: userCoords ? `${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}` : userLocation && userLocation !== "Locating..." ? userLocation : "Nigeria",
     status: "active",
     video_url: urlData.publicUrl,
   });
