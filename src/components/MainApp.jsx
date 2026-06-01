@@ -510,8 +510,9 @@ mediaRecorderRef.current = recorder;
             { name:"🛡️ DSS", number:"2348039003044" },
             { name:"⚔️ NSCDC", number:"234112" },
             { name:"🪖 Army", number:"234193" },
-          ].map(agency => ( <a
-            
+          ].map(agency => ( 
+            <a
+
               key={agency.name}
               href={"https://wa.me/" + agency.number + "?text=" + encodeURIComponent("🚨 EMERGENCY ALERT — SafeAlertNG\n\nLocation: " + userLocation + "\nTime: " + new Date().toLocaleString("en-NG") + "\n\nReported via SafeAlertNG")}
               target="_blank"
