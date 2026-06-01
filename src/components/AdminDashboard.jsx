@@ -247,7 +247,8 @@ export default function AdminDashboard({ session, onBack }) {
                   {inc.video_url && (adminRole === "super_admin" || adminRole === "admin") && (
                     <button onClick={async () => {
                       if (!window.confirm("Delete this video?")) return;
-                      const fileName = inc.video_url.split("/incident-videos/")[1];
+                      const pathParts = inc.video_url.split("/object/public/incident-videos/");
+const fileName = pathParts[1] || inc.video_url.split("/").pop();
                       await supabase.storage.from("incident-videos").remove([fileName]);
                       await supabase.from("incidents").update({ video_url: null }).eq("id", inc.id);
                       setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, video_url: null } : i));
