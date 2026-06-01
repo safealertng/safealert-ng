@@ -98,6 +98,7 @@ export default function MainApp({ session }) {
         async (position) => {
           const { latitude, longitude } = position.coords;
           setUserCoords({ lat: latitude, lng: longitude });
+            userCoordsRef.current = { lat: latitude, lng: longitude };
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
@@ -312,7 +313,7 @@ const fetchFamily = async () => {
     description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
     lat: userCoords?.lat || 0,
     lng: userCoords?.lng || 0,
-    state: userCoords ? `${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}` : userLocation && userLocation !== "Locating..." ? userLocation : "Nigeria",
+    state: userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : userCoords ? `${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)}` : userLocation && userLocation !== "Locating..." ? userLocation : "Nigeria",
     status: "active",
     video_url: urlData.publicUrl,
   });
@@ -1816,6 +1817,7 @@ function LiveAlertsScreen({ session }) {
   const [filterState, setFilterState] = useState("all");
   const [newAlert, setNewAlert] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
+  const userCoordsRef = useRef(null);
 
   const TYPE_LABELS = { kidnapping:"Kidnapping", kidnapping_attempt:"Kidnapping Attempt", robbery:"Armed Robbery", armed_robbery:"Armed Robbery", suspicious:"Suspicious Activity", suspicious_activity:"Suspicious Activity", suspicious_vehicle:"Suspicious Vehicle", attack:"Physical Attack", physical_attack:"Physical Attack", vehicle:"Suspect Vehicle", banditry:"Banditry", terrorism:"Terror Activity", other:"Other Threat" };
   const TYPE_ICONS = { kidnapping:"🚨", kidnapping_attempt:"🚨", robbery:"🔫", armed_robbery:"🔫", suspicious:"👁️", suspicious_activity:"👁️", suspicious_vehicle:"🚗", attack:"⚠️", physical_attack:"⚠️", vehicle:"🚗", banditry:"🏕️", terrorism:"💣", other:"📢" };
