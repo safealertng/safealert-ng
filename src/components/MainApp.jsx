@@ -278,7 +278,7 @@ const fetchFamily = async () => {
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" }, audio: true
+        video: { facingMode: facingMode }, audio: true
       });
       setStream(mediaStream);
       setRecordedChunks([]);
@@ -366,7 +366,7 @@ mediaRecorderRef.current = recorder;
   const [realFamily, setRealFamily] = useState([]);
   const mediaRecorderRef = useRef(null);
   const [recordedChunks, setRecordedChunks] = useState([]);
-  const [videoSaved, setVideoSaved] = useState(false);
+  const [facingMode, setFacingMode] = useState("user");const [videoSaved, setVideoSaved] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
@@ -522,13 +522,9 @@ mediaRecorderRef.current = recorder;
       </div>
       </div>
       <div style={{ display:"flex", gap:10, margin:"0 16px" }}>
-        <button style={{ ...S.ghostBtn, flex:1, margin:0, color:"#FF2D2D", borderColor:"#FF2D2D33" }} onClick={() => {
-  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-    mediaRecorderRef.current.requestData();
-    setTimeout(() => mediaRecorderRef.current.stop(), 300);
-  }
-}}>⏹ Stop Recording</button>
-        <button style={{ ...S.ghostBtn, flex:1, margin:0 }} onClick={endBroadcast}>END BROADCAST</button>
+         
+        <button style={{ ...S.ghostBtn, flex:1, margin:0 }} onClick={() => { setFacingMode(f => f==="user"?"environment":"user"); stopCamera(); setTimeout(()=>startCamera(),300); }}>🔄 Flip</button>
+<button style={{ ...S.ghostBtn, flex:1, margin:0 }} onClick={endBroadcast}>END BROADCAST</button>
       </div>
       {videoSaved && <OKBox title="VIDEO SAVED" sub="Recording saved to incident feed ✅" />}
     </Shell>
