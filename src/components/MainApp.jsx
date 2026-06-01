@@ -449,13 +449,23 @@ mediaRecorderRef.current = recorder;
   const endBroadcast = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.requestData();
-      setTimeout(() => mediaRecorderRef.current.stop(), 300);
+      setTimeout(() => {
+        mediaRecorderRef.current.stop();
+        setTimeout(() => {
+          stopCamera();
+          setPanicStage("idle"); setPanicCount(5);
+          setRecordTime(0); setUploadPct(0); setDispatched(false);
+          clearInterval(recRef.current); clearInterval(upRef.current);
+          setReportStage("form"); setSelectedIncident(null);
+        }, 500);
+      }, 300);
+    } else {
+      stopCamera();
+      setPanicStage("idle"); setPanicCount(5);
+      setRecordTime(0); setUploadPct(0); setDispatched(false);
+      clearInterval(recRef.current); clearInterval(upRef.current);
+      setReportStage("form"); setSelectedIncident(null);
     }
-    stopCamera();
-    setPanicStage("idle"); setPanicCount(5);
-    setRecordTime(0); setUploadPct(0); setDispatched(false);
-    clearInterval(recRef.current); clearInterval(upRef.current);
-    setReportStage("form"); setSelectedIncident(null);
   };
   const copyNumber = (num, id) => {
     navigator.clipboard?.writeText(num).catch(() => {});
