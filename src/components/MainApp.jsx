@@ -88,6 +88,10 @@ const ZONE_COLORS = { "North West":"#4A90D9","North East":"#E67E22","North Centr
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MainApp({ session }) {
   const [nav, setNav] = useState("home");
+const [showOnboarding, setShowOnboarding] = useState(() => {
+  return !localStorage.getItem("safealert_onboarded");
+});
+const [onboardSlide, setOnboardSlide] = useState(0);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [userLocation, setUserLocation] = useState("Locating...");
   const [userCoords, setUserCoords] = useState(null);
@@ -494,7 +498,87 @@ mediaRecorderRef.current = recorder;
     (stateZone === "All" || s.zone === stateZone)
   ), [stateSearch, stateZone]);
 
-  // ── PANIC COUNTDOWN ──────────────────────────────────────────────────────
+  // ── ONBOARDING ───────────────────────────────────────────────────────────
+const SLIDES = [
+  {
+    icon: "🚨",
+    color: "#FF2D2D",
+    title: "PANIC BUTTON",
+    subtitle: "One tap emergency",
+    body: "Hold the PANIC button to instantly alert Police, Family & Emergency Services with your live GPS location and video broadcast.",
+    tag: "POLICE · FAMILY · LIVE VIDEO",
+  },
+  {
+    icon: "👨‍👩‍👧‍👦",
+    color: "#00FF88",
+    title: "FAMILY TRACKER",
+    subtitle: "Live GPS for loved ones",
+    body: "Monitor your family's real-time location. Any member can shake their phone 3× for a silent SOS — you'll get their live GPS instantly.",
+    tag: "LIVE GPS · SHAKE-TO-SOS",
+  },
+  {
+    icon: "🔒",
+    color: "#4A90D9",
+    title: "ANONYMOUS TIPS",
+    subtitle: "Report threats safely",
+    body: "Submit intelligence to Police, DSS, Army or NSCDC with zero identity stored. No name, no IP, no trace — your safety is protected.",
+    tag: "ZERO IDENTITY · ENCRYPTED",
+  },
+];
+
+if (showOnboarding) {
+  const slide = SLIDES[onboardSlide];
+  const isLast = onboardSlide === SLIDES.length - 1;
+  return (
+    <div style={{ background:"#080808", minHeight:"100vh", fontFamily:"'Barlow Condensed',sans-serif", color:"#fff", maxWidth:430, margin:"0 auto", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"space-between", padding:"40px 24px 48px", position:"relative" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&display=swap'); * { box-sizing:border-box; margin:0; padding:0; }`}</style>
+
+      {/* Skip */}
+      <button onClick={() => { localStorage.setItem("safealert_onboarded","1"); setShowOnboarding(false); }} style={{ position:"absolute", top:20, right:20, background:"none", border:"none", color:"#444", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:1 }}>
+        SKIP ✕
+      </button>
+
+      {/* Logo */}
+      <div style={{ fontSize:13, fontWeight:900, letterSpacing:2, color:"#333", marginTop:8 }}>
+        SafeAlert<span style={{ color:"#FF2D2D" }}>NG</span>
+      </div>
+
+      {/* Icon */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", textAlign:"center", gap:24, padding:"20px 0" }}>
+        <div style={{ width:120, height:120, borderRadius:"50%", background:`${slide.color}18`, border:`2px solid ${slide.color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:52, boxShadow:`0 0 40px ${slide.color}33` }}>
+          {slide.icon}
+        </div>
+
+        <div>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:3, color:slide.color, marginBottom:8, fontFamily:"monospace" }}>{slide.tag}</div>
+          <div style={{ fontSize:32, fontWeight:900, letterSpacing:1, marginBottom:6 }}>{slide.title}</div>
+          <div style={{ fontSize:14, color:"#555", fontWeight:700, marginBottom:16, letterSpacing:1 }}>{slide.subtitle}</div>
+          <div style={{ fontSize:14, color:"#666", lineHeight:1.8, maxWidth:320 }}>{slide.body}</div>
+        </div>
+
+        {/* Dots */}
+        <div style={{ display:"flex", gap:8 }}>
+          {SLIDES.map((_,i) => (
+            <div key={i} style={{ width: i===onboardSlide ? 24 : 8, height:8, borderRadius:4, background: i===onboardSlide ? slide.color : "#222", transition:"all 0.3s" }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Button */}
+      <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:12 }}>
+        <button onClick={() => {
+          if (isLast) { localStorage.setItem("safealert_onboarded","1"); setShowOnboarding(false); }
+          else setOnboardSlide(s => s + 1);
+        }} style={{ width:"100%", background:`linear-gradient(135deg,${slide.color},${slide.color}99)`, border:"none", borderRadius:14, padding:"16px", color: slide.color==="#00FF88"?"#000":"#fff", fontSize:16, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", letterSpacing:2, boxShadow:`0 4px 20px ${slide.color}44` }}>
+          {isLast ? "🛡️ GET STARTED" : "NEXT →"}
+        </button>
+        {onboardSlide > 0 && (
+          <button onClick={() => setOnboardSlide(s => s - 1)} style={{ background:"none", border:"none", color:"#444", fontSize:12, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, letterSpacing:1 }}>← BACK</button>
+        )}
+      </div>
+    </div>
+  );
+}// ── PANIC COUNTDOWN ──────────────────────────────────────────────────────
   if (panicStage === "countdown") return (
     <Shell shakeFlash={false}>
       <div style={S.panicOverlay}>
