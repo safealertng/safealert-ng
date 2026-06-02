@@ -234,46 +234,20 @@ export default function AdminDashboard({ session, onBack }) {
 
         {/* TIPS */}
         {nav === "tips" && (
-          <TipsTab supabase={supabase} />
-        )}
-
-        {/* TIPS */}
-        {nav === "tips" && (
-          <TipsSection supabase={supabase} />
-        )}
-
-        {/* TIPS */}
-        {nav === "tips" && (
-          <div>
-            <div style={A.sectionTitle}>ANONYMOUS TIPS — {tips?.length || 0} TOTAL</div>
-            {(tips||[]).length === 0 && <div style={{ color:"#444", padding:20, textAlign:"center" }}>No tips submitted yet.</div>}
-            {(tips||[]).map(tip => (
-              <div key={tip.id} style={A.row}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:13, color:"#FFB800" }}>{tip.category?.toUpperCase()}</div>
-                  <div style={{ color:"#555", fontSize:11, marginTop:3 }}>🏛 {tip.agency} · 📍 {tip.state} · ⚡ {tip.urgency}</div>
-                  <div style={{ color:"#888", fontSize:12, marginTop:6, lineHeight:1.6 }}>{tip.tip_text}</div>
-                  <div style={{ color:"#333", fontSize:10, marginTop:4, fontFamily:"monospace" }}>REF: {tip.tip_hash} · {new Date(tip.created_at).toLocaleString("en-NG")}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* TIPS */}
-        {nav === "tips" && (
           <div>
             <div style={A.sectionTitle}>ANONYMOUS TIPS — {tips.length} TOTAL</div>
-            {tips.length === 0 && <div style={{ color:"#444", padding:20, textAlign:"center" }}>No tips submitted yet.</div>}
+            {tips.length === 0 && (
+              <div style={{ color: "#444", padding: 20, textAlign: "center" }}>No tips submitted yet.</div>
+            )}
             {tips.map(tip => (
-              <div key={tip.id} style={{ ...A.row, flexDirection:"column", alignItems:"flex-start" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", width:"100%", marginBottom:6 }}>
-                  <span style={{ fontWeight:800, fontSize:13, color:"#FFB800" }}>{tip.category?.toUpperCase()}</span>
-                  <span style={{ fontSize:10, color:"#333", fontFamily:"monospace" }}>{tip.tip_hash}</span>
+              <div key={tip.id} style={{ ...A.row, flexDirection: "column", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", marginBottom: 6 }}>
+                  <span style={{ fontWeight: 800, fontSize: 13, color: "#FFB800" }}>{tip.category?.toUpperCase()}</span>
+                  <span style={{ fontSize: 10, color: "#333", fontFamily: "monospace" }}>{tip.tip_hash}</span>
                 </div>
-                <div style={{ color:"#555", fontSize:11, marginBottom:6 }}>🏛 {tip.agency} · 📍 {tip.state} · ⚡ {tip.urgency}</div>
-                <div style={{ color:"#aaa", fontSize:12, lineHeight:1.6, marginBottom:6 }}>{tip.tip_text}</div>
-                <div style={{ color:"#333", fontSize:10, fontFamily:"monospace" }}>{new Date(tip.created_at).toLocaleString("en-NG")}</div>
+                <div style={{ color: "#555", fontSize: 11, marginBottom: 6 }}>🏛 {tip.agency} · 📍 {tip.state} · ⚡ {tip.urgency}</div>
+                <div style={{ color: "#aaa", fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}>{tip.tip_text}</div>
+                <div style={{ color: "#333", fontSize: 10, fontFamily: "monospace" }}>{new Date(tip.created_at).toLocaleString("en-NG")}</div>
               </div>
             ))}
           </div>
