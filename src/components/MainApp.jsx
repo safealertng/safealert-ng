@@ -298,7 +298,7 @@ const fetchFamily = async () => {
         recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = async () => {
   if (chunks.length === 0) { console.warn("No chunks recorded"); return; }
-  const blob = new Blob(chunks, { type: "video/webm" });
+  const blob = new Blob(chunks, { type: mimeType || "video/webm" });
   console.log("Uploading video blob, size:", blob.size);
   const fileName = `panic-${session?.user?.id}-${Date.now()}.webm`;
   const { error: uploadError } = await supabase.storage
@@ -406,7 +406,6 @@ mediaRecorderRef.current = recorder;
 
   useEffect(() => {
     if (videoSaved) {
-      stopCamera();
       setPanicStage("idle"); setPanicCount(5);
       setRecordTime(0); setUploadPct(0); setDispatched(false);
       clearInterval(recRef.current); clearInterval(upRef.current);
@@ -462,6 +461,13 @@ mediaRecorderRef.current = recorder;
       mediaRecorderRef.current.requestData();
       setTimeout(() => {
         mediaRecorderRef.current.stop();
+        setTimeout(() => {
+          stopCamera();
+          setPanicStage("idle"); setPanicCount(5);
+          setRecordTime(0); setUploadPct(0); setDispatched(false);
+          clearInterval(recRef.current); clearInterval(upRef.current);
+          setReportStage("form"); setSelectedIncident(null);
+        }, 3000);
       }, 300);
     } else {
       stopCamera();
