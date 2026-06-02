@@ -302,7 +302,10 @@ const fetchFamily = async () => {
   if (chunks.length === 0) { console.warn("No chunks recorded"); return; }
   const blob = new Blob(chunks, { type: "video/webm" });
   console.log("Uploading video blob, size:", blob.size);
-  const fileName = `panic-${session?.user?.id}-${Date.now()}.webm`;
+  const { data: { session: currentSession } } = await supabase.auth.getSession();
+  const userId = currentSession?.user?.id || session?.user?.id;
+  if (!userId) { console.error("No session for upload"); return; }
+  const fileName = `panic-${userId}-${Date.now()}.webm`;
   const { error: uploadError } = await supabase.storage
     .from("incident-videos")
     .upload(fileName, blob, { contentType: "video/webm" });
@@ -310,7 +313,7 @@ const fetchFamily = async () => {
   const { data: urlData } = supabase.storage.from("incident-videos").getPublicUrl(fileName);
   console.log("Video uploaded:", urlData.publicUrl);
   const { error: dbError } = await supabase.from("incidents").insert({
-    reporter_id: session?.user?.id,
+    reporter_id: userId,
     type: "other",
     description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
     lat: userCoords?.lat || 0,
