@@ -12,7 +12,6 @@ export default function AdminDashboard({ session, onBack }) {
   const [users, setUsers] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [tips, setTips] = useState([]);
-  const [tips, setTips] = useState([]);
   const [panicEvents, setPanicEvents] = useState([]);
   const [adminRoles, setAdminRoles] = useState([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
