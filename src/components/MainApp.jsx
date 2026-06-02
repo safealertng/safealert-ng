@@ -1630,35 +1630,48 @@ function TipLineScreen() {
       setSendPct(Math.min(Math.round(p),100));
     }, 180);
     try {
-      const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
-      await supabase.from("anonymous_tips").insert({
-        tip_hash: ref,
-        category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
-        agency: agency,
-        state: tipState || "Not specified",
-        urgency: urgency || "Not specified",
-        tip_text: tipText,
-      });
-      await emailjs.send(
-        "safealert_service",
-        "template_ooew17k",
-        {
-          category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
-          agency: agency,
-          state: tipState || "Not specified",
-          urgency: urgency || "Not specified",
-          tip_text: tipText,
-          time: new Date().toLocaleString("en-NG"),
-          to_email: "lordfosterinc@gmail.com",
-        }
-      );
-      clearInterval(iv);
-      setSendPct(100);
-      setSending(false);
-      setSent(true);
-      setTipRef(ref);
-      setTipTab("sent");
-    } catch(err) {
+  const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
+  
+  const { data: tipData, error: tipError } = await supabase.from("anonymous_tips").insert({
+    tip_hash: ref,
+    category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
+    agency: agency,
+    state: tipState || "Not specified",
+    urgency: urgency || "Not specified",
+    tip_text: tipText,
+  });
+  
+  if (tipError) {
+    clearInterval(iv);
+    setSending(false);
+    alert("Supabase error: " + tipError.message + " | Code: " + tipError.code);
+    return;
+  }
+
+  await emailjs.send(
+    "safealert_service",
+    "template_ooew17k",
+    {
+      category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
+      agency: agency,
+      state: tipState || "Not specified",
+      urgency: urgency || "Not specified",
+      tip_text: tipText,
+      time: new Date().toLocaleString("en-NG"),
+      to_email: "lordfosterinc@gmail.com",
+    }
+  );
+  clearInterval(iv);
+  setSendPct(100);
+  setSending(false);
+  setSent(true);
+  setTipRef(ref);
+  setTipTab("sent");
+} catch(err) {
+  clearInterval(iv);
+  setSending(false);
+  alert("Error: " + JSON.stringify(err));
+}
       clearInterval(iv);
       setSending(false);
       console.error("EmailJS error:", JSON.stringify(err));
