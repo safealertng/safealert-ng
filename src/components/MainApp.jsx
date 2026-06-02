@@ -1956,7 +1956,7 @@ function LiveAlertsScreen({ session }) {
                       <div style={{ width:36, height:36, borderRadius:8, background:col+"18", border:`1px solid ${col}33`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>{icon}</div>
                       <div>
                         <div style={{ fontWeight:800, fontSize:13, color:"#ddd" }}>{TYPE_LABELS[inc.type] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-                        <div style={{ color:"#555", fontSize:11, marginTop:2 }}>📍 {inc.state}</div>
+                        <div style={{ color:"#555", fontSize:11, marginTop:2 }}>📍 {inc.lat && inc.lng && inc.lat !== 0 ? `${inc.lat.toFixed(4)}, ${inc.lng.toFixed(4)}` : inc.state}</div>
                       </div>
                     </div>
                     <span style={{ fontSize:9, fontWeight:700, letterSpacing:1, padding:"3px 8px", borderRadius:4, background:isActive?"#FF2D2D18":"#00FF8818", color:isActive?"#FF2D2D":"#00FF88", border:`1px solid ${isActive?"#FF2D2D44":"#00FF8844"}`, flexShrink:0 }}>{inc.status?.toUpperCase()}</span>
