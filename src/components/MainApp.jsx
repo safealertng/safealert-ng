@@ -1631,6 +1631,14 @@ function TipLineScreen() {
     }, 180);
     try {
       const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
+      await supabase.from("anonymous_tips").insert({
+        tip_hash: ref,
+        category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
+        agency: agency,
+        state: tipState || "Not specified",
+        urgency: urgency || "Not specified",
+        tip_text: tipText,
+      });
       await emailjs.send(
         "safealert_service",
         "template_ooew17k",
