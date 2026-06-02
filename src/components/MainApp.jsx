@@ -529,10 +529,10 @@ mediaRecorderRef.current = recorder;
         <div style={{ fontSize:9, color:"#444", letterSpacing:2, fontFamily:"monospace", marginBottom:8 }}>REPORT TO AGENCIES VIA WHATSAPP</div>
         <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
           {[
-            { name:"🚔 Police", number:"2349199" },
-            { name:"🛡️ DSS", number:"2348039003044" },
-            { name:"⚔️ NSCDC", number:"234112" },
-            { name:"🪖 Army", number:"234193" },
+            { name:"🚔 Police", number:"2349168343710" },
+            { name:"🛡️ DSS", number:"2349153391309" },
+            { name:"⚔️ NSCDC", number:"2349092914164" },
+            { name:"🪖 Army", number:"2347017222225" },
           ].map(agency => ( 
             <a
 
