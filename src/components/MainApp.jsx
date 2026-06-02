@@ -804,7 +804,29 @@ mediaRecorderRef.current = recorder;
           </div>
 
           <div style={{ padding:"14px 16px 0" }}>
-            <MicroLabel>OTHER SECURITY & EMERGENCY AGENCIES</MicroLabel>
+            <MicroLabel>NATIONAL SECURITY AGENCIES — VERIFIED CONTACTS</MicroLabel>
+            {[
+              { icon:"🚔", name:"Nigeria Police Force", twitter:"https://x.com/PoliceNG", facebook:"https://facebook.com/ngpolice", email:"pressforabuja@police.gov.ng" },
+              { icon:"🛡️", name:"Dept. of State Services (DSS)", twitter:"https://x.com/OfficialDSSNG", facebook:"https://dss.gov.ng", email:"" },
+              { icon:"⚔️", name:"NSCDC Civil Defence", twitter:"https://x.com/official_NSCDC", facebook:"https://facebook.com/NSCDC", email:"" },
+              { icon:"🪖", name:"Nigerian Army", twitter:"https://x.com/HQNigerianArmy", facebook:"https://facebook.com/nigerian.armyinfo", email:"" },
+            ].map((ag, i) => (
+              <div key={i} style={{ ...S.card, marginBottom:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                  <span style={{ fontSize:24 }}>{ag.icon}</span>
+                  <span style={{ fontWeight:800, fontSize:13, color:"#fff" }}>{ag.name}</span>
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button style={{ ...S.redBtn, background:"#1DA1F220", color:"#1DA1F2", border:"1px solid #1DA1F244" }} onClick={() => window.open(ag.twitter, "_blank")}>🐦 Twitter/X</button>
+                  <button style={{ ...S.redBtn, background:"#1877F220", color:"#1877F2", border:"1px solid #1877F244" }} onClick={() => window.open(ag.facebook, "_blank")}>📘 Facebook</button>
+                  {ag.email && <button style={{ ...S.redBtn, background:"#FF6B0020", color:"#FF6B00", border:"1px solid #FF6B0044" }} onClick={() => window.open(`mailto:${ag.email}`)}>📧 Email</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ padding:"14px 16px 0" }}>
+            <MicroLabel>OTHER SECURITY & EMERGENCY AGENCIES — LEGACY</MicroLabel>
             {selectedState.agencies.map((ag, i) => {
               const open = expandedAgency === i;
               return (
