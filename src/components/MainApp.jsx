@@ -1621,31 +1621,37 @@ function TipLineScreen() {
   const AGENCIES = ["Nigeria Police Force (NPF)","Department of State Services (DSS)","Nigerian Army Intelligence","NSCDC","Economic & Financial Crimes Commission (EFCC)","NDLEA (Drug-related only)"];
 
   const sendTip = async () => {
-  if (!tipText.trim() || !tipType || !agency) return;
-  setSending(true); setSendPct(0);
-  let p = 0;
-  const iv = setInterval(()=>{
-    p += Math.random()*15+5;
-    if (p >= 100) { p = 100; clearInterval(iv); }
-    setSendPct(Math.min(Math.round(p),100));
-  }, 180);
-  try {
-    const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
-    const { error: tipError } = await supabase.from("anonymous_tips").insert({
-      tip_hash: ref,
-      category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
-      agency: agency,
-      state: tipState || "Not specified",
-      urgency: urgency || "Not specified",
-      tip_text: tipText,
-    });
-    if (tipError) {
-      clearInterval(iv);
-      setSending(false);
-      alert("Supabase error: " + tipError.message + " | Code: " + tipError.code);
-      return;
-    }
-    await emailjs.send("safealert_service", "template_ooew17k", {
+    if (!tipText.trim() || !tipType || !agency) return;
+    setSending(true); setSendPct(0);
+    let p = 0;
+    const iv = setInterval(()=>{
+      p += Math.random()*15+5;
+      if (p >= 100) { p = 100; clearInterval(iv); }
+      setSendPct(Math.min(Math.round(p),100));
+    }, 180);
+    try {
+  const ref = "TIP-"+Math.random().toString(36).substr(2,8).toUpperCase();
+  
+  const { data: tipData, error: tipError } = await supabase.from("anonymous_tips").insert({
+    tip_hash: ref,
+    category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
+    agency: agency,
+    state: tipState || "Not specified",
+    urgency: urgency || "Not specified",
+    tip_text: tipText,
+  });
+  
+  if (tipError) {
+    clearInterval(iv);
+    setSending(false);
+    alert("Supabase error: " + tipError.message + " | Code: " + tipError.code);
+    return;
+  }
+
+  await emailjs.send(
+    "safealert_service",
+    "template_ooew17k",
+    {
       category: TIP_TYPES.find(t=>t.id===tipType)?.label || tipType,
       agency: agency,
       state: tipState || "Not specified",
@@ -1653,19 +1659,25 @@ function TipLineScreen() {
       tip_text: tipText,
       time: new Date().toLocaleString("en-NG"),
       to_email: "lordfosterinc@gmail.com",
-    });
-    clearInterval(iv);
-    setSendPct(100);
-    setSending(false);
-    setSent(true);
-    setTipRef(ref);
-    setTipTab("sent");
-  } catch(err) {
-    clearInterval(iv);
-    setSending(false);
-    alert("Error: " + JSON.stringify(err));
-  }
-};
+    }
+  );
+  clearInterval(iv);
+  setSendPct(100);
+  setSending(false);
+  setSent(true);
+  setTipRef(ref);
+  setTipTab("sent");
+} catch(err) {
+  clearInterval(iv);
+  setSending(false);
+  alert("Error: " + JSON.stringify(err));
+}
+      clearInterval(iv);
+      setSending(false);
+      console.error("EmailJS error:", JSON.stringify(err));
+      alert("Failed to send tip: " + JSON.stringify(err));
+    }
+  };
 
   if (tipTab === "sent") return (
     <div style={{ padding:"24px 16px", textAlign:"center" }}>
