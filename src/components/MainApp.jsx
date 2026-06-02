@@ -301,10 +301,11 @@ const fetchFamily = async () => {
   if (chunks.length === 0) { console.warn("No chunks recorded"); return; }
   const blob = new Blob(chunks, { type: mimeType || "video/webm" });
   console.log("Uploading video blob, size:", blob.size);
-  const fileName = `panic-${session?.user?.id}-${Date.now()}.webm`;
+  const ext = mimeType && mimeType.includes("mp4") ? "mp4" : "webm";
+  const fileName = `panic-${session?.user?.id}-${Date.now()}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from("incident-videos")
-    .upload(fileName, blob, { contentType: "video/webm" });
+    .upload(fileName, blob, { contentType: mimeType || "video/webm" });
   if (uploadError) { console.error("Upload error:", uploadError); return; }
   const { data: urlData } = supabase.storage.from("incident-videos").getPublicUrl(fileName);
   console.log("Video uploaded:", urlData.publicUrl);
