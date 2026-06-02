@@ -748,7 +748,36 @@ mediaRecorderRef.current = recorder;
   );
 
   // ── STATE CONTACTS ────────────────────────────────────────────────────────
-  if (nav === "contacts") {
+  if (nav === "agencies") { return null; } if (nav === "contacts") {
+    return (
+      <Shell shakeFlash={false}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"14px 16px 12px", borderBottom:"1px solid #111" }}>
+          <button style={S.backLnk} onClick={() => setNav("home")}>← Back</button>
+          <div style={{ fontSize:18, fontWeight:900 }}>🛡️ Security Agencies</div>
+        </div>
+        <div style={{ padding:"16px" }}>
+          <div style={{ color:"#555", fontSize:12, marginBottom:16 }}>Official verified contacts for Nigerian security agencies. Tap to visit their official pages.</div>
+          {[
+            { icon:"🚔", name:"Nigeria Police Force", twitter:"https://x.com/PoliceNG", facebook:"https://facebook.com/ngpolice", email:"pressforabuja@police.gov.ng" },
+            { icon:"🛡️", name:"Dept. of State Services (DSS)", twitter:"https://x.com/OfficialDSSNG", facebook:"https://dss.gov.ng", email:"" },
+            { icon:"⚔️", name:"NSCDC Civil Defence", twitter:"https://x.com/official_NSCDC", facebook:"https://facebook.com/NSCDC", email:"" },
+            { icon:"🪖", name:"Nigerian Army", twitter:"https://x.com/HQNigerianArmy", facebook:"https://facebook.com/nigerian.armyinfo", email:"" },
+          ].map((ag, i) => (
+            <div key={i} style={{ ...S.card, marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                <span style={{ fontSize:26 }}>{ag.icon}</span>
+                <span style={{ fontWeight:800, fontSize:14, color:"#fff" }}>{ag.name}</span>
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <button style={{ ...S.redBtn, background:"#1DA1F220", color:"#1DA1F2", border:"1px solid #1DA1F244" }} onClick={() => window.open(ag.twitter, "_blank")}>🐦 Twitter/X</button>
+                <button style={{ ...S.redBtn, background:"#1877F220", color:"#1877F2", border:"1px solid #1877F244" }} onClick={() => window.open(ag.facebook, "_blank")}>📘 Facebook</button>
+                {ag.email && <button style={{ ...S.redBtn, background:"#FF6B0020", color:"#FF6B00", border:"1px solid #FF6B0044" }} onClick={() => window.open(`mailto:${ag.email}`)}>📧 Email</button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Shell>
+    );
     if (selectedState) {
       const zc = ZONE_COLORS[selectedState.zone] || "#888";
       return (
@@ -1025,7 +1054,7 @@ mediaRecorderRef.current = recorder;
           { icon:"📹", label:"Report Incident", action:() => setNav("report") },
           { icon:"👨‍👩‍👧‍👦", label:"Family Tracker", action:() => setNav("family"), alert: familyMembers.some(m => m.status==="alert") },
           { icon:"📡", label:"Live Alerts", action:() => setNav("alerts") },
-          { icon:"🗺️", label:"State Contacts", action:() => setNav("contacts") },
+          { icon:"🛡️", label:"Security Agencies", action:() => setNav("contacts") },
           { icon:"🚗", label:"Safe Convoy", action:() => setNav("convoy"), badge:"NEW" },
           { icon:"🆘", label:"Ransom Alert", action:() => setNav("ransom"), badge:"NEW" },
           { icon:"🔒", label:"Anonymous Tip", action:() => setNav("tipline"), badge:"NEW" },
