@@ -164,7 +164,7 @@ export default function AdminDashboard({ session, onBack }) {
           ["overview", "📊 Overview"],
           ["users", "👥 Users"],
           ["incidents", "🚨 Incidents"],
-      ["tips", "📩 Anon Tips"],
+      ["tips", "📩 Tips"],
           ["panics", "🆘 Panics"],
           ["checkpoints", "🚧 Checkpoints"],
           ["pending", `📰 Pending${pendingNews.length > 0 ? ` (${pendingNews.length})` : ""}`],
