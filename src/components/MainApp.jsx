@@ -453,6 +453,22 @@ mediaRecorderRef.current = recorder;
         resolved: false
       });
     } catch(e) { console.error("Failed to save panic event:", e); }
+    // Auto-send WhatsApp alerts to all family members
+familyMembers.forEach(m => {
+  if (!m.phone) return;
+  const raw = m.phone.toString().replace(/\D/g, "");
+  const intl = raw.startsWith("0") ? "234" + raw.slice(1) : raw.startsWith("234") ? raw : "234" + raw;
+  const msg = encodeURIComponent(
+    `🚨 PANIC ALERT — SafeAlertNG\n\n` +
+    `Your family member needs help RIGHT NOW!\n\n` +
+    `📍 Location: ${userLocation}\n` +
+    `🕐 Time: ${new Date().toLocaleString("en-NG")}\n` +
+    `🗺️ GPS: ${userCoords?.lat?.toFixed(4) || "Unknown"}, ${userCoords?.lng?.toFixed(4) || "Unknown"}\n\n` +
+    `⚠️ Please call them immediately or contact Police: 199\n\n` +
+    `Sent via SafeAlert NG 🛡️`
+  );
+  window.open(`https://wa.me/${intl}?text=${msg}`, "_blank");
+});
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     let p = 0;
