@@ -456,19 +456,7 @@ mediaRecorderRef.current = recorder;
     // Send OneSignal push notification to all subscribers
 try {
   await fetch("https://onesignal.com/api/v1/notifications", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Basic ${import.meta.env.VITE_ONESIGNAL_API_KEY}`,
-    },
-    body: JSON.stringify({
-      app_id: "6abae88c-4a8e-4311-908c-5079a8acf2d3",
-      included_segments: ["All"],
-      headings: { en: "🚨 PANIC ALERT — SafeAlertNG" },
-      contents: { en: `Emergency activated at ${userLocation}. Tap to respond immediately.` },
-      priority: 10,
-      ttl: 3600,
-    }),
+    ...
   });
 } catch(e) { console.error("OneSignal notification error:", e); }
 startCamera();
