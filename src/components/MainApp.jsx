@@ -467,7 +467,6 @@ try {
 } catch(e) { console.error("Notification error:", e); }
 // Auto-send WhatsApp alerts to all family members
 familyMembers.forEach(m => {
-  ...
 });
 startCamera();    
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
