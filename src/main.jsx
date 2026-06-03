@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
-import { supabase } from './lib/supabase'
+import { supabase } from './lib/supabase.js'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -16,28 +16,37 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function setupPushNotifications() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
     });
+    const subJson = JSON.parse(JSON.stringify(subscription));
+    console.log('Push subscription:', subJson);
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
-      await supabase.from('push_subscriptions').upsert({
+      const { error } = await supabase.from('push_subscriptions').upsert({
         user_id: session.user.id,
-        subscription: JSON.parse(JSON.stringify(subscription))
+        subscription: subJson
       }, { onConflict: 'user_id' });
+      if (error) console.error('Subscription save error:', error);
+      else console.log('Subscription saved!');
+    } else {
+      console.log('No session found — subscription not saved');
     }
-  } catch(e) { console.error('Push setup error:', e); }
+  } catch(e) { 
+    console.error('Push setup error:', e); 
+  }
 }
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    setTimeout(setupPushNotifications, 3000);
+    setTimeout(setupPushNotifications, 4000);
   });
 }
 
