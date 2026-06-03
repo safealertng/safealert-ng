@@ -453,13 +453,7 @@ mediaRecorderRef.current = recorder;
         resolved: false
       });
     } catch(e) { console.error("Failed to save panic event:", e); }
-    // Send OneSignal push notification to all subscribers
-try {
-  await fetch("https://onesignal.com/api/v1/notifications", {
-    ...
-  });
-} catch(e) { console.error("OneSignal notification error:", e); }
-startCamera();
+    startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     let p = 0;
     upRef.current = setInterval(() => {
