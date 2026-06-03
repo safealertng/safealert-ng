@@ -465,6 +465,17 @@ try {
     });
   }
 } catch(e) { console.error("Notification error:", e); }
+// Send push notification to all subscribed devices
+try {
+  await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-panic-notification", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+    },
+    body: JSON.stringify({ userLocation }),
+  });
+} catch(e) { console.error("Push to all devices error:", e); }
 // Auto-send WhatsApp alerts to all family members
 familyMembers.forEach(m => {
 });
