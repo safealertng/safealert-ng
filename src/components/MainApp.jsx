@@ -453,14 +453,18 @@ mediaRecorderRef.current = recorder;
         resolved: false
       });
     } catch(e) { console.error("Failed to save panic event:", e); }
-   // Send native push notification
+   // Send notification via service worker
 try {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('🚨 PANIC ALERT — SafeAlertNG', {
-      body: `Emergency activated at ${userLocation}. Tap to respond immediately.`,
+  if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+    const reg = await navigator.serviceWorker.ready;
+    reg.showNotification('🚨 PANIC ALERT — SafeAlertNG', {
+      body: `Emergency at ${userLocation}. Tap to respond immediately.`,
       icon: '/favicon.svg',
+      vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
     });
+  }
+} catch(e) { console.error("Notification error:", e); }
   }
 } catch(e) { console.error("Notification error:", e); }
     startCamera();
