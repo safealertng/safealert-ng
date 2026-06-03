@@ -453,6 +453,16 @@ mediaRecorderRef.current = recorder;
         resolved: false
       });
     } catch(e) { console.error("Failed to save panic event:", e); }
+   // Send native push notification
+try {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('🚨 PANIC ALERT — SafeAlertNG', {
+      body: `Emergency activated at ${userLocation}. Tap to respond immediately.`,
+      icon: '/favicon.svg',
+      requireInteraction: true,
+    });
+  }
+} catch(e) { console.error("Notification error:", e); }
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     let p = 0;
