@@ -465,8 +465,6 @@ try {
     });
   }
 } catch(e) { console.error("Notification error:", e); }
-  }
-} catch(e) { console.error("Notification error:", e); }
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     let p = 0;
