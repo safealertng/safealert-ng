@@ -2473,22 +2473,10 @@ function NewsScreen({ session }) {
     } else alert("Error: " + error.message);
   };
 
-  const incidentNews = incidents.filter(i => i.show_in_news !== false).map(i => ({
-    id: `inc-${i.id}`,
-    headline: `${(i.type || "incident").replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())} reported in ${i.state || "Nigeria"}`,
-    body: i.description || "Community incident report submitted via SafeAlert NG.",
-    state: i.state || "Nigeria",
-    category: i.type || "alert",
-    source: "SafeAlert NG Community",
-    urgent: i.status === "active",
-    time: new Date(i.created_at).toLocaleString("en-NG"),
-    from_incident: true,
-  }));
-  const allNews = [...liveNews.map(n => ({ 
+ const allNews = [...liveNews.map(n => ({ 
     ...n, 
     time: n.created_at ? new Date(n.created_at).toLocaleString("en-NG") : n.time || "Recently"
-  })), ...incidentNews];
-  const filtered = newsFilter === "all" ? allNews
+  }))];
     : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
     : allNews.filter(n => n.category === newsFilter);
   const toggleBookmark = (id) => setBookmarked(b => b.includes(id) ? b.filter(x => x !== id) : [...b, id]);
