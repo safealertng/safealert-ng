@@ -471,6 +471,7 @@ try {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
       "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
     },
     body: JSON.stringify({ userLocation }),
