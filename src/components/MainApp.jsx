@@ -1639,7 +1639,7 @@ const [log, setLog] = useState([
               </div>
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={()=>setRansomTab("agents")} style={{ ...cS.redBtn, flex:1, marginTop:0, fontSize:12 }}>🛡️ Contact Agent</button>
-                <button onClick={() => setRansomTab("police")} style={{ ...cS.ghostBtn, flex:1, marginTop:0, fontSize:12 }}>👮 Call Police</button>
+                <button onClick={() => window.open("tel:199")} style={{ ...cS.ghostBtn, flex:1, marginTop:0, fontSize:12 }}>👮 Call Police 199</button>
               </div>
             </div>
           )}
