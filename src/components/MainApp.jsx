@@ -94,6 +94,7 @@ const [showOnboarding, setShowOnboarding] = useState(() => {
 const [onboardSlide, setOnboardSlide] = useState(0);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [userLocation, setUserLocation] = useState("Locating...");
+  const userLocationRef = useRef("Locating...");
   const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
   const mimeTypeRef = useRef("video/webm");
@@ -456,8 +457,14 @@ mediaRecorderRef.current = recorder;
           const data = await res.json();
           const city = data.address?.city || data.address?.town || data.address?.village || "";
           const state = data.address?.state || "";
-          setUserLocation(city && state ? `${city}, ${state}` : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-        } catch { setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`); }
+          const loc = city && state ? `${city}, ${state}` : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        setUserLocation(loc);
+        userLocationRef.current = loc;
+        } catch (err) { 
+          const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setUserLocation(fallback);
+          userLocationRef.current = fallback;
+        }
         resolve(null);
       },
       () => resolve(null),
