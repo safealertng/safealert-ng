@@ -397,6 +397,7 @@ mediaRecorderRef.current = recorder;
   const localAudioTrackRef = useRef(null);
   const localVideoTrackRef = useRef(null);
   const voiceRecorderRef = useRef(null);
+  const locationIntervalRef = useRef(null);
   const voiceTimerRef = useRef(null);
 
   useEffect(() => {
@@ -511,6 +512,19 @@ familyMembers.forEach(m => {
 });
 startCamera();    
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
+    locationIntervalRef.current = setInterval(async () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      userCoordsRef.current = { lat, lng };
+      await supabase.from("panic_events")
+        .update({ lat, lng })
+        .eq("user_id", session?.user?.id)
+        .eq("resolved", false);
+    }, null, { enableHighAccuracy: true, maximumAge: 0 });
+  }
+}, 10000);
     let p = 0;
     upRef.current = setInterval(() => {
       p += Math.random() * 12;
@@ -530,7 +544,7 @@ startCamera();
           stopCamera();
           setPanicStage("idle"); setPanicCount(5);
           setRecordTime(0); setUploadPct(0); setDispatched(false);
-          clearInterval(recRef.current); clearInterval(upRef.current);
+          clearInterval(recRef.current); clearInterval(upRef.current); clearInterval(locationIntervalRef.current);
           setReportStage("form"); setSelectedIncident(null);
         }, 3000);
       }, 300);
@@ -538,7 +552,7 @@ startCamera();
       stopCamera();
       setPanicStage("idle"); setPanicCount(5);
       setRecordTime(0); setUploadPct(0); setDispatched(false);
-      clearInterval(recRef.current); clearInterval(upRef.current);
+      clearInterval(recRef.current); clearInterval(upRef.current); clearInterval(locationIntervalRef.current);
       setReportStage("form"); setSelectedIncident(null);
     }
   };
