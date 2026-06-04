@@ -2834,7 +2834,7 @@ function HeatMapScreen() {
 // STYLES
 // ─────────────────────────────────────────────────────────────────────────────
 const S = {
-  shell: { background:"#080808", minHeight:"100vh", fontFamily:"'Barlow Condensed', sans-serif", color:"#fff", maxWidth:430, margin:"0 auto", overflowX:"hidden" },
+  shell: { background:"#0a0e1a", minHeight:"100vh", fontFamily:"'Barlow Condensed', sans-serif", color:"#fff", maxWidth:430, margin:"0 auto", overflowX:"hidden" },
   header: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 18px 10px", borderBottom:"1px solid #0f0f0f" },
   logo: { fontSize:22, fontWeight:800, letterSpacing:1 },
   panicBtn: { width:118, height:118, borderRadius:"50%", background:"radial-gradient(circle at 35% 35%, #FF4444, #990000)", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", boxShadow:"0 0 28px #FF2D2D55, 0 0 60px #FF2D2D18", animation:"pulse 2.2s ease-in-out infinite" },
