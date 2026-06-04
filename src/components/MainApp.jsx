@@ -1564,20 +1564,12 @@ function ConvoyScreen() {
 // RANSOM ALERT NETWORK COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const RECOVERY_AGENTS = [
-  { id:1, name:"IGP Anti-Kidnapping Unit", specialty:"Nigeria Police Force — Nationwide", rating:"★ Official", cases:null, verified:true, contact:"199 / 08032003913", icon:"🚔" },
-  { id:2, name:"DSS — Dept. of State Services", specialty:"Intelligence & Counter-Kidnapping", rating:"★ Official", cases:null, verified:true, contact:"08039003044", icon:"🛡️" },
-  { id:3, name:"Nigerian Army Intelligence", specialty:"Military Anti-Kidnapping Operations", rating:"★ Official", cases:null, verified:true, contact:"193 / 08028701718", icon:"⚔️" },
-  { id:4, name:"NSCDC Anti-Kidnapping Squad", specialty:"Civil Defence — Nationwide", rating:"★ Official", cases:null, verified:true, contact:"112 / 08061581938", icon:"🪖" },
-  { id:5, name:"Inspector General's Complaint", specialty:"Report Police Misconduct", rating:"★ Official", cases:null, verified:true, contact:"08057000001", icon:"⚖️" },
-  { id:6, name:"National Emergency Mgmt Agency", specialty:"NEMA — Disaster & Crisis Response", rating:"★ Official", cases:null, verified:true, contact:"08021872150", icon:"🆘" },
+  { id:1, name:"DSS — Dept. of State Services", specialty:"Intelligence & Counter-Kidnapping", rating:"★ Official", cases:null, verified:true, contact:"09153391309 / 09153391310 / 09088373514", whatsapp:"09153391309", icon:"🛡️" },
+  { id:2, name:"Nigeria Police Force CRU", specialty:"Complaint Response Unit — Nationwide", rating:"★ Official", cases:null, verified:true, contact:"08057000001 / 08057000002 / 09133333785", whatsapp:"08057000003", icon:"🚔" },
+  { id:3, name:"Nigerian Army Call Centre", specialty:"Military Anti-Kidnapping Operations", rating:"★ Official", cases:null, verified:true, contact:"193 / 07017222225 / 09060005290 / 08099900131", whatsapp:"07017222225", icon:"⚔️" },
+  { id:4, name:"Nigerian Army Human Rights", specialty:"Military Misconduct & Abuse Complaints", rating:"★ Official", cases:null, verified:true, contact:"08160134303 / 08161507644", whatsapp:"08160134303", icon:"🪖" },
+  { id:5, name:"NSCDC Headquarters", specialty:"Civil Defence — Visit nscdc.gov.ng", rating:"★ Official", cases:null, verified:true, contact:"nscdc.gov.ng", whatsapp:null, icon:"🛂" },
 ];
-
-function RansomScreen() {
-  const [ransomTab, setRansomTab] = useState("active"); // active | agents | guide
-  const [caseStarted, setCaseStarted] = useState(false);
-  const [victim, setVictim] = useState("");
-  const [contact, setContact] = useState("");
-  const [logEntry, setLogEntry] = useState("");
   const [log, setLog] = useState([
     { time:"08:12", text:"First contact received — unknown number. Demanded ₦5M.", type:"contact" },
     { time:"09:45", text:"Recovery agent Bello Abubakar contacted. Advising do NOT pay immediately.", type:"agent" },
@@ -1597,7 +1589,7 @@ function RansomScreen() {
       </div>
 
       <div style={{ display:"flex", gap:0, margin:"0 16px 14px", background:"#0d0d0d", borderRadius:10, border:"1px solid #1a1a1a", overflow:"hidden" }}>
-        {[["active","📋 Case Log"],["agents","🛡️ Agents"],["police","👮 Police"],["guide","📖 Guide"]].map(([t,l])=>(
+        {[["active","📋 Case Log"],["agents","🛡️ Security Agencies"],["guide","📖 Guide"]].map(([t,l])=>(
           <button key={t} onClick={()=>setRansomTab(t)} style={{ flex:1, padding:"10px 4px", background:ransomTab===t?"#FF2D2D22":"transparent", color:ransomTab===t?"#FF2D2D":"#555", border:"none", cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif", fontWeight:700, fontSize:11, borderBottom:ransomTab===t?"2px solid #FF2D2D":"2px solid transparent" }}>
             {l}
           </button>
@@ -1678,25 +1670,6 @@ function RansomScreen() {
         </div>
       )}
 
-      {ransomTab === "police" && (
-        <div style={{ padding:"0 16px" }}>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>36 STATE POLICE COMMANDS</div>
-          {STATES.map(s => (
-            <div key={s.state} style={{ ...cS.card, marginBottom:8 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                <div>
-                  <div style={{ fontWeight:800, fontSize:13 }}>{s.state}</div>
-                  <div style={{ color:"#555", fontSize:11 }}>{s.police.commissioner}</div>
-                  <div style={{ color:"#FF2D2D", fontWeight:900, fontSize:14, fontFamily:"monospace", marginTop:4 }}>{s.police.number}</div>
-                </div>
-                <span style={{ fontSize:20 }}>🚔</span>
-              </div>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => window.open(`tel:${s.police.number}`)} style={{ flex:1, background:"linear-gradient(135deg,#FF2D2D,#990000)", border:"none", borderRadius:8, padding:"10px", color:"#fff", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>📞 Call</button>
-                <button onClick={() => window.open(`https://wa.me/${s.police.number.replace(/\D/g,"")}?text=Hello, I need urgent police assistance. I am using SafeAlert NG. There is a kidnapping emergency.`)} style={{ flex:1, background:"#25D36622", border:"1px solid #25D36644", borderRadius:8, padding:"10px", color:"#25D366", fontSize:12, fontWeight:900, cursor:"pointer", fontFamily:"'Barlow Condensed',sans-serif" }}>💬 WhatsApp</button>
-              </div>
-            </div>
-          ))}
         </div>
       )}
 
