@@ -472,11 +472,12 @@ mediaRecorderRef.current = recorder;
     );
   });
 }
+const currentLocation = userLocationRef.current !== "Locating..." ? userLocationRef.current : (userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Nigeria");
       await supabase.from("panic_events").insert({
         user_id: session?.user?.id,
         lat: userCoords?.lat || 0,
         lng: userCoords?.lng || 0,
-        state: userLocation && userLocation !== "Locating..." ? userLocation : `${userCoords?.lat?.toFixed(4) || "0"}, ${userCoords?.lng?.toFixed(4) || "0"}`,
+       state: currentLocation,
         police_notified: true,
         resolved: false
       });
