@@ -1669,10 +1669,6 @@ const RECOVERY_AGENTS = [
           </div>
         </div>
       )}
-
-        </div>
-      )}
-
       {ransomTab === "guide" && (
         <div style={{ padding:"0 16px" }}>
           <div style={{ fontSize:9, fontWeight:700, letterSpacing:2.5, color:"#444", marginBottom:10, fontFamily:"monospace" }}>IMMEDIATE STEPS TO TAKE</div>
