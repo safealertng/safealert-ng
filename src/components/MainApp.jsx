@@ -472,7 +472,7 @@ mediaRecorderRef.current = recorder;
     );
   });
 }
-const currentLocation = userLocationRef.current !== "Locating..." ? userLocationRef.current : (userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Nigeria");
+const currentLocation = userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Unknown";
       await supabase.from("panic_events").insert({
         user_id: session?.user?.id,
         lat: userCoords?.lat || 0,
