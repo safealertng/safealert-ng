@@ -487,7 +487,7 @@ try {
   if ('serviceWorker' in navigator && Notification.permission === 'granted') {
     const reg = await navigator.serviceWorker.ready;
     reg.showNotification('🚨 PANIC ALERT — SafeAlertNG', {
-      body: `Emergency at ${userLocation}. Tap to respond immediately.`,
+      body: `Emergency at ${currentLocation}. Maps: https://maps.google.com/?q=${userCoordsRef.current?.lat},${userCoordsRef.current?.lng}`,
       icon: '/favicon.svg',
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
