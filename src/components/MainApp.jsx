@@ -2757,10 +2757,10 @@ function HeatMapScreen() {
   // filtered is defined above with GDELT data
   // Merge GDELT real data with static risk estimates
   const enrichedStates = STATES_RISK.map(s => {
-    const realCount = gdeltData[s.state] || 0;
+    const realCount = (liveRisk[s.state] || 0) + (gdeltData[s.state] || 0);
     const totalIncidents = s.incidents + realCount;
-    const realRisk = realCount > 5 ? 4 : realCount > 3 ? 3 : realCount > 1 ? 2 : s.risk;
-    return { ...s, incidents: totalIncidents, risk: realCount > 0 ? realRisk : s.risk, hasRealData: realCount > 0 };
+    const dynamicRisk = realCount > 10 ? 4 : realCount > 5 ? 3 : realCount > 2 ? 2 : realCount > 0 ? Math.max(s.risk - 1, 1) : s.risk;
+    return { ...s, incidents: totalIncidents, risk: dynamicRisk, hasRealData: realCount > 0 };
   });
   const filtered = hmFilter === "all" ? enrichedStates : enrichedStates.filter(s => s.zone === hmFilter);
   const sorted = [...filtered].sort((a,b) => sortBy === "risk" ? b.risk - a.risk : sortBy === "incidents" ? b.incidents - a.incidents : a.state.localeCompare(b.state));
