@@ -444,6 +444,27 @@ mediaRecorderRef.current = recorder;
 
   const startBroadcast = async () => {
     try {
+      if (navigator.geolocation && (!userCoords || userLocation === "Locating...")) {
+  await new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserCoords({ lat: latitude, lng: longitude });
+        userCoordsRef.current = { lat: latitude, lng: longitude };
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
+          const data = await res.json();
+          const city = data.address?.city || data.address?.town || data.address?.village || "";
+          const state = data.address?.state || "";
+          setUserLocation(city && state ? `${city}, ${state}` : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        } catch { setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`); }
+        resolve(null);
+      },
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  });
+}
       await supabase.from("panic_events").insert({
         user_id: session?.user?.id,
         lat: userCoords?.lat || 0,
