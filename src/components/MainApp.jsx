@@ -2477,7 +2477,8 @@ function NewsScreen({ session }) {
     ...n, 
     time: n.created_at ? new Date(n.created_at).toLocaleString("en-NG") : n.time || "Recently"
   }))];
-    : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
+    const filtered = newsFilter === "all" ? allNews
+  : newsFilter === "urgent" ? allNews.filter(n => n.urgent)
     : allNews.filter(n => n.category === newsFilter);
   const toggleBookmark = (id) => setBookmarked(b => b.includes(id) ? b.filter(x => x !== id) : [...b, id]);
 
