@@ -1570,7 +1570,13 @@ const RECOVERY_AGENTS = [
   { id:4, name:"Nigerian Army Human Rights", specialty:"Military Misconduct & Abuse Complaints", rating:"★ Official", cases:null, verified:true, contact:"08160134303 / 08161507644", whatsapp:"08160134303", icon:"🪖" },
   { id:5, name:"NSCDC Headquarters", specialty:"Civil Defence — Visit nscdc.gov.ng", rating:"★ Official", cases:null, verified:true, contact:"nscdc.gov.ng", whatsapp:null, icon:"🛂" },
 ];
-  const [log, setLog] = useState([
+  function RansomScreen() {
+  const [ransomTab, setRansomTab] = useState("active");
+  const [caseStarted, setCaseStarted] = useState(false);
+  const [victim, setVictim] = useState("");
+  const [contact, setContact] = useState("");
+  const [logEntry, setLogEntry] = useState("");
+const [log, setLog] = useState([
     { time:"08:12", text:"First contact received — unknown number. Demanded ₦5M.", type:"contact" },
     { time:"09:45", text:"Recovery agent Bello Abubakar contacted. Advising do NOT pay immediately.", type:"agent" },
     { time:"11:30", text:"Police notified — Kaduna State Command Case Ref: KD/2026/0445.", type:"police" },
