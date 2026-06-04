@@ -400,7 +400,7 @@ mediaRecorderRef.current = recorder;
 
   useEffect(() => {
     if (panicStage === "countdown" && panicCount > 0) countRef.current = setTimeout(() => setPanicCount(c => c - 1), 1000);
-    if (panicStage === "countdown" && panicCount === 0) { setPanicStage("active"); startBroadcast(); }
+    if (panicStage === "countdown" && panicCount === 0) { setPanicStage("active"); startBroadcast().catch(e => console.error("Broadcast error:", e)); }
     return () => clearTimeout(countRef.current);
   }, [panicStage, panicCount]);
 
