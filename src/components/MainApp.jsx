@@ -2424,6 +2424,21 @@ function NewsScreen({ session }) {
         .order("created_at", { ascending: false })
         .limit(30);
       if (!error && data) setLiveNews(data);
+
+      // Fetch from NewsAPI via Edge Function
+      try {
+        const res = await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/fetch-news", {
+          headers: { "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr" }
+        });
+        const newsData = await res.json();
+        if (newsData.articles) {
+          const formatted = newsData.articles.map(a => ({
+            ...a,
+            time: a.time ? new Date(a.time).toLocaleString("en-NG") : "Just now"
+          }));
+          setLiveNews(prev => [...prev, ...formatted]);
+        }
+      } catch(e) { console.error("News API error:", e); }
     };
     fetchNews();
     const channel = supabase
