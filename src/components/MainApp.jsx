@@ -2630,7 +2630,7 @@ function HeatMapScreen() {
     const fetchGdelt = async () => {
       try {
         const res = await fetch(
-          "https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/fetch-news?type=safety",
+          "https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/fetch-news",
           { headers: { "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr" } }
         );
         const data = await res.json();
