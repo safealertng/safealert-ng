@@ -5,91 +5,65 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const RSS_FEEDS = [
+  { url: "https://punchng.com/feed", source: "The Punch" },
+  { url: "https://www.vanguardngr.com/feed", source: "Vanguard" },
+  { url: "https://www.channelstv.com/feed", source: "Channels TV" },
+];
+
+const SECURITY_KEYWORDS = [
+  "attack", "kidnap", "bandit", "robbery", "shooting", "bomb",
+  "terror", "arrest", "security", "police", "army", "militant",
+  "abduct", "ransom", "hostage", "crime", "murder", "kill"
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
-  const url = new URL(req.url);
-  const type = url.searchParams.get("type") || "news";
-
   try {
-    if (type === "safety") {
-      // GDELT — real security incidents in Nigeria by state
-      const nigerianStates = [
-        "Lagos","Abuja","Kano","Kaduna","Rivers","Borno","Zamfara",
-        "Katsina","Sokoto","Anambra","Imo","Oyo","Delta","Edo",
-        "Plateau","Niger","Benue","Enugu","Kwara","Kogi","Ogun",
-        "Ondo","Ekiti","Osun","Cross River","Akwa Ibom","Bayelsa",
-        "Taraba","Adamawa","Gombe","Bauchi","Yobe","Jigawa","Kebbi",
-        "Nasarawa","Ebonyi","Abia"
-      ];
-
-      const stateData: Record<string, number> = {};
-
-      // Query GDELT for recent Nigeria security events
-      const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=Nigeria+security+attack+kidnap+bandit&mode=artlist&maxrecords=250&format=json&timespan=7d`;
-      
-      const res = await fetch(gdeltUrl);
-      const data = await res.json();
-
-      if (data.articles) {
-        for (const article of data.articles) {
-          const title = (article.title || "").toLowerCase();
-          for (const state of nigerianStates) {
-            if (title.includes(state.toLowerCase())) {
-              stateData[state] = (stateData[state] || 0) + 1;
-            }
-          }
-        }
-      }
-
-      return new Response(JSON.stringify({ stateData, source: "GDELT", updated: new Date().toISOString() }), {
-        headers: { ...CORS, "Content-Type": "application/json" },
-      });
-    }
-
-    // Default — Google News RSS feed
-    const queries = [
-      "Nigeria security attack",
-      "Nigeria kidnapping",
-      "Nigeria bandit",
-      "Nigeria police arrest",
-      "Nigeria army operation",
-    ];
-
     const allArticles = [];
 
-    for (const query of queries) {
-      const encoded = encodeURIComponent(query + " Nigeria");
-      const rssUrl = `https://news.google.com/rss/search?q=${encoded}&hl=en-NG&gl=NG&ceid=NG:en`;
-      
-      const res = await fetch(rssUrl);
-      const xml = await res.text();
+    for (const feed of RSS_FEEDS) {
+      try {
+        const res = await fetch(feed.url, {
+          headers: { "User-Agent": "SafeAlertNG/1.0" }
+        });
+        const xml = await res.text();
 
-      const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
-      
-      for (const item of items.slice(0, 3)) {
-        const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] || 
-                      item.match(/<title>(.*?)<\/title>/)?.[1] || "";
-        const link = item.match(/<link>(.*?)<\/link>/)?.[1] || "";
-        const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
-        const source = item.match(/<source[^>]*>(.*?)<\/source>/)?.[1] || "Google News";
+        const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
 
-        if (title) {
-          allArticles.push({
-            id: Math.random().toString(36).substr(2, 9),
-            headline: title.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'"),
-            source,
-            link,
-            time: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
-            state: "Nigeria",
-            category: query.includes("kidnap") ? "kidnap" : 
-                      query.includes("bandit") ? "banditry" :
-                      query.includes("attack") ? "alert" : "alert",
-            urgent: false,
-            body: "",
-            from_api: true,
-          });
+        for (const item of items.slice(0, 10)) {
+          const title = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/)?.[1] ||
+                        item.match(/<title>(.*?)<\/title>/)?.[1] || "";
+          const link = item.match(/<link>(.*?)<\/link>/)?.[1] ||
+                       item.match(/<guid>(.*?)<\/guid>/)?.[1] || "";
+          const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || "";
+          const description = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1] ||
+                              item.match(/<description>(.*?)<\/description>/)?.[1] || "";
+
+          const titleLower = title.toLowerCase();
+          const isSecurityRelated = SECURITY_KEYWORDS.some(k => titleLower.includes(k));
+
+          if (title && isSecurityRelated) {
+            allArticles.push({
+              id: Math.random().toString(36).substr(2, 9),
+              headline: title.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/<[^>]+>/g, ""),
+              body: description.replace(/<[^>]+>/g, "").substring(0, 200),
+              source: feed.source,
+              link,
+              time: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+              state: "Nigeria",
+              category: titleLower.includes("kidnap") || titleLower.includes("abduct") ? "kidnap" :
+                        titleLower.includes("bandit") ? "banditry" :
+                        titleLower.includes("terror") || titleLower.includes("bomb") ? "terror" :
+                        titleLower.includes("rob") ? "robbery" : "alert",
+              urgent: titleLower.includes("urgent") || titleLower.includes("breaking"),
+              from_api: true,
+            });
+          }
         }
+      } catch (e) {
+        console.error(`Error fetching ${feed.source}:`, e);
       }
     }
 
@@ -100,12 +74,12 @@ serve(async (req) => {
       return true;
     });
 
-    return new Response(JSON.stringify({ articles: unique.slice(0, 20) }), {
+    return new Response(JSON.stringify({ articles: unique.slice(0, 30) }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ articles: [], stateData: {}, error: err.message }), {
+    return new Response(JSON.stringify({ articles: [], error: err.message }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   }
