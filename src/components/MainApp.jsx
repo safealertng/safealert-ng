@@ -1122,7 +1122,7 @@ export default function MainApp({ session }) {
     <AdminDashboard session={session} onBack={() => setNav("home")} />
   );
 
-  if (nav === "plans") return <SubscriptionPlans session={session} onBack={() => setNav("home")} />;
+  if (nav === "plans") return <SubscriptionPlans session={session} onBack={() => setNav("profile")} />;
 
   if (nav === "profile") return (
     <Shell shakeFlash={false}>
