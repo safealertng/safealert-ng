@@ -21,6 +21,8 @@ export default function AdminDashboard({ session, onBack }) {
   const [toast, setToast] = useState(null);
   const [checkpoints, setCheckpoints] = useState([]);
   const [pendingNews, setPendingNews] = useState([]);
+  const [subCounts, setSubCounts] = useState({ freemium: 0, basic: 0, premium: 0 });
+  const [subscribers, setSubscribers] = useState([]);
 
   const showToast = (msg, color = "#00FF88") => {
     setToast({ msg, color });
@@ -49,7 +51,7 @@ export default function AdminDashboard({ session, onBack }) {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes] = await Promise.all([
+    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, subsRes] = await Promise.all([
       supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
@@ -57,9 +59,18 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("family_members").select("count", { count: "exact" }),
       supabase.from("checkpoint_reports").select("*").order("created_at", { ascending: false }),
       supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("user_subscriptions").select("*, subscription_plans(*)").order("created_at", { ascending: false }),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
+    if (subsRes.data) {
+      setSubscribers(subsRes.data);
+      setSubCounts({
+        freemium: subsRes.data.filter(s => s.subscription_plans?.name === "Freemium").length,
+        basic: subsRes.data.filter(s => s.subscription_plans?.name === "Basic").length,
+        premium: subsRes.data.filter(s => s.subscription_plans?.name === "Premium").length,
+      });
+    }
     if (usersRes.data) setUsers(usersRes.data);
     if (incidentsRes.data) setIncidents(incidentsRes.data);
       const tipsRes = await supabase.from("anonymous_tips").select("*").order("created_at", { ascending: false });
@@ -199,15 +210,15 @@ export default function AdminDashboard({ session, onBack }) {
             <div style={A.sectionTitle}>SUBSCRIPTIONS OVERVIEW</div>
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 140, background: "#111", border: "1px solid #00FF8820", borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: "#00FF88" }}>—</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#00FF88" }}>{subCounts.freemium}</div>
             <div style={{ fontSize: 10, color: "#555", letterSpacing: 1, marginTop: 4 }}>FREEMIUM USERS</div>
           </div>
           <div style={{ flex: 1, minWidth: 140, background: "#111", border: "1px solid #FFB80020", borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: "#FFB800" }}>—</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#FFB800" }}>{subCounts.basic}</div>
             <div style={{ fontSize: 10, color: "#555", letterSpacing: 1, marginTop: 4 }}>BASIC SUBSCRIBERS</div>
           </div>
           <div style={{ flex: 1, minWidth: 140, background: "#111", border: "1px solid #FF2D2D20", borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: "#FF2D2D" }}>—</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#FF2D2D" }}>{subCounts.premium}</div>
             <div style={{ fontSize: 10, color: "#555", letterSpacing: 1, marginTop: 4 }}>PREMIUM SUBSCRIBERS</div>
           </div>
         </div>
