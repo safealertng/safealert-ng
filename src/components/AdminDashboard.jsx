@@ -196,7 +196,23 @@ export default function AdminDashboard({ session, onBack }) {
                 </div>
               ))}
             </div>
-            <div style={A.sectionTitle}>RECENT INCIDENTS</div>
+            <div style={A.sectionTitle}>SUBSCRIPTIONS OVERVIEW</div>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 140, background: "#111", border: "1px solid #00FF8820", borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#00FF88" }}>—</div>
+            <div style={{ fontSize: 10, color: "#555", letterSpacing: 1, marginTop: 4 }}>FREEMIUM USERS</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 140, background: "#111", border: "1px solid #FFB80020", borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#FFB800" }}>—</div>
+            <div style={{ fontSize: 10, color: "#555", letterSpacing: 1, marginTop: 4 }}>BASIC SUBSCRIBERS</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 140, background: "#111", border: "1px solid #FF2D2D20", borderRadius: 12, padding: "14px 16px", textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#FF2D2D" }}>—</div>
+            <div style={{ fontSize: 10, color: "#555", letterSpacing: 1, marginTop: 4 }}>PREMIUM SUBSCRIBERS</div>
+          </div>
+        </div>
+
+        <div style={A.sectionTitle}>RECENT INCIDENTS</div>
             {incidents.slice(0, 5).map(inc => (
               <div key={inc.id} style={A.row}>
                 <div style={{ flex: 1 }}>
