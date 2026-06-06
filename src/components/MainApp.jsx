@@ -1901,7 +1901,7 @@ const cS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // LIVE ALERTS SCREEN — pulls real incidents from Supabase
 // ─────────────────────────────────────────────────────────────────────────────
-function ProfileScreen({ session, onBack, onAdmin }) {
+function ProfileScreen({ session, onBack, onAdmin, onPlans }) {
   const [fullName, setFullName] = useState(session?.user?.user_metadata?.full_name || "");
   const [phone, setPhone] = useState(session?.user?.user_metadata?.phone || "");
   const [userState, setUserState] = useState(session?.user?.user_metadata?.state || "");
