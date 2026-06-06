@@ -88,6 +88,8 @@ const ZONE_COLORS = { "North West": "#4A90D9", "North East": "#E67E22", "North C
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MainApp({ session }) {
   const [nav, setNav] = useState("home");
+  const [userPlan, setUserPlan] = useState("freemium");
+  const [planExpired, setPlanExpired] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem("safealert_onboarded");
   });
@@ -172,6 +174,34 @@ export default function MainApp({ session }) {
     const interval = setInterval(updateLocation, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [session]);
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!session?.user?.id) return;
+      const { data } = await supabase
+        .from("user_subscriptions")
+        .select("*, subscription_plans(*)")
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .single();
+      if (!data) {
+        setPlanExpired(true);
+        setUserPlan("none");
+      } else {
+        const now = new Date();
+        const end = new Date(data.end_date);
+        if (end < now) {
+          setPlanExpired(true);
+          setUserPlan("expired");
+        } else {
+          setPlanExpired(false);
+          setUserPlan(data.subscription_plans?.name?.toLowerCase() || "freemium");
+        }
+      }
+    };
+    checkSubscription();
+  }, [session]);
+
   useEffect(() => {
     const loadFamily = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1123,6 +1153,22 @@ export default function MainApp({ session }) {
   );
 
   if (nav === "plans") return <SubscriptionPlans session={session} onBack={() => setNav("profile")} />;
+
+  if (planExpired && nav !== "profile" && nav !== "plans" && nav !== "news") return (
+    <div style={{ background: "#0a0a0a", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: 70, height: 70, borderRadius: "50%", background: "#FF2D2D20", border: "2px solid #FF2D2D", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, marginBottom: 20 }}>🔒</div>
+      <h2 style={{ fontSize: 22, fontWeight: 900, color: "#fff", textAlign: "center", marginBottom: 8 }}>Your Free Trial Has Ended</h2>
+      <p style={{ fontSize: 13, color: "#666", textAlign: "center", marginBottom: 24, lineHeight: 1.6 }}>
+        Your 90-day free trial has expired. Upgrade to continue using SafeAlertNG's safety features.
+      </p>
+      <button onClick={() => setNav("plans")} style={{ width: "100%", maxWidth: 320, background: "#FF2D2D", border: "none", borderRadius: 12, padding: "14px", color: "#fff", fontSize: 15, fontWeight: 900, cursor: "pointer", marginBottom: 12 }}>
+        ⭐ Upgrade Now
+      </button>
+      <button onClick={() => setNav("news")} style={{ width: "100%", maxWidth: 320, background: "transparent", border: "1px solid #333", borderRadius: 12, padding: "14px", color: "#555", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        📰 Read Security News Only
+      </button>
+    </div>
+  );
 
   if (nav === "profile") return (
     <Shell shakeFlash={false}>
