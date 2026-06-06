@@ -2891,11 +2891,11 @@ textarea:focus { border-color:#FF2D2D44 !important; }
 // Add this function inside MainApp.jsx and call it as a screen
 
 function SubscriptionPlans({ session, onBack }) {
-  const [loading, setLoading] = React.useState(false);
-  const [selectedPlan, setSelectedPlan] = React.useState(null);
-  const [currentPlan, setCurrentPlan] = React.useState(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [currentPlan, setCurrentPlan] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchCurrentPlan = async () => {
       if (!session?.user?.id) return;
       const { data } = await supabase
