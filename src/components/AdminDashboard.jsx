@@ -407,7 +407,7 @@ const A = {
   shell: { background: "#080808", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", maxWidth: 430, margin: "0 auto" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: "1px solid #111" },
   logo: { fontSize: 20, fontWeight: 900, letterSpacing: 1 },
-  nav: { display: "flex", overflowX: "auto", borderBottom: "1px solid #111", background: "#0a0a0a", WebkitOverflowScrolling: "touch" },
+  nav: { display: "flex", overflowX: "auto", borderBottom: "1px solid #111", background: "#0a0a0a", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none", whiteSpace: "nowrap" },
   navBtn: { flexShrink: 0, padding: "10px 10px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: 0.5 },
   sectionTitle: { fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#444", marginBottom: 10, marginTop: 16, fontFamily: "monospace" },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 },
