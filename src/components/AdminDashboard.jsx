@@ -168,6 +168,7 @@ export default function AdminDashboard({ session, onBack }) {
           ["checkpoints", "🚧 Checkpoints"],
           ["pending", `📰 Pending${pendingNews.length > 0 ? ` (${pendingNews.length})` : ""}`],
           ...(adminRole === "super_admin" ? [["roles", "🔐 Roles"]] : []),
+          ...(adminRole === "super_admin" ? [["subscriptions", "💳 Subscriptions"]] : []),
         ].map(([k, l]) => (
           <button key={k} onClick={() => setNav(k)} style={{ ...A.navBtn, borderBottom: nav === k ? "2px solid #FF2D2D" : "2px solid transparent", color: nav === k ? "#FF2D2D" : "#555" }}>{l}</button>
         ))}
