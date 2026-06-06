@@ -2415,14 +2415,14 @@ function NewsScreen({ session }) {
 
   useEffect(() => {
     const fetchNews = async () => {
-    if (liveNews.length > 0) return;
+    
       // Fetch from Supabase database
       const { data, error } = await supabase
         .from("security_news")
         .select("*")
         .eq("status", "approved")
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(30);
       if (!error && data) setLiveNews(data);
     };
     fetchNews();
