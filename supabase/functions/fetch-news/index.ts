@@ -6,9 +6,12 @@ const CORS = {
 };
 
 const RSS_FEEDS = [
+  { url: "https://www.channelstv.com/feed", source: "Channels TV" },
   { url: "https://punchng.com/feed", source: "The Punch" },
   { url: "https://www.vanguardngr.com/feed", source: "Vanguard" },
-  { url: "https://www.channelstv.com/feed", source: "Channels TV" },
+  { url: "https://dailypost.ng/feed", source: "Daily Post" },
+  { url: "https://www.premiumtimesng.com/feed", source: "Premium Times" },
+  { url: "https://thiscableng.com/feed", source: "TheCable" },
 ];
 
 const SECURITY_KEYWORDS = [

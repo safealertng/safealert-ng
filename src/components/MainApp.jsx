@@ -1122,10 +1122,12 @@ export default function MainApp({ session }) {
     <AdminDashboard session={session} onBack={() => setNav("home")} />
   );
 
+  if (nav === "plans") return <SubscriptionPlans session={session} onBack={() => setNav("home")} />;
+
   if (nav === "profile") return (
     <Shell shakeFlash={false}>
       <TopBar title="MY PROFILE" onBack={() => setNav("home")} />
-      <ProfileScreen session={session} onBack={() => setNav("home")} onAdmin={() => setNav("admin")} />
+      <ProfileScreen session={session} onBack={() => setNav("home")} onAdmin={() => setNav("admin")} onPlans={() => setNav("plans")} />
     </Shell>
   );
 
@@ -1986,6 +1988,9 @@ function ProfileScreen({ session, onBack, onAdmin }) {
       </div>
       <button onClick={onAdmin} style={{ width: "100%", background: "transparent", border: "1px solid #FF6B0033", borderRadius: 8, padding: "12px", color: "#FF6B00", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 8 }}>
         🔐 ADMIN DASHBOARD
+      </button>
+      <button onClick={onPlans} style={{ width: "100%", background: "transparent", border: "1px solid #00FF8833", borderRadius: 8, padding: "12px", color: "#00FF88", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 8 }}>
+        ⭐ UPGRADE PLAN
       </button>
       <button onClick={signOut} style={{ width: "100%", background: "transparent", border: "1px solid #FF2D2D33", borderRadius: 8, padding: "12px", color: "#FF2D2D", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>
         🚪 SIGN OUT
@@ -2882,3 +2887,285 @@ const CSS = `
 button:active { opacity:0.75; }
 textarea:focus { border-color:#FF2D2D44 !important; }
 `;
+// SubscriptionPlans Component for SafeAlertNG
+// Add this function inside MainApp.jsx and call it as a screen
+
+function SubscriptionPlans({ session, onBack }) {
+  const [loading, setLoading] = React.useState(false);
+  const [selectedPlan, setSelectedPlan] = React.useState(null);
+  const [currentPlan, setCurrentPlan] = React.useState(null);
+
+  React.useEffect(() => {
+    const fetchCurrentPlan = async () => {
+      if (!session?.user?.id) return;
+      const { data } = await supabase
+        .from("user_subscriptions")
+        .select("*, subscription_plans(*)")
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .single();
+      if (data) setCurrentPlan(data);
+    };
+    fetchCurrentPlan();
+  }, [session]);
+
+  const plans = [
+    {
+      id: 1,
+      name: "Freemium",
+      price: 0,
+      duration: "90 days free",
+      color: "#00FF88",
+      badge: null,
+      contacts: "Up to 3 contacts",
+      priority: "Standard Alert",
+      features: [
+        "✅ Panic Button",
+        "✅ Location Sharing",
+        "✅ Security News Feed",
+        "✅ Up to 3 Emergency Contacts",
+        "✅ Standard Priority Alert",
+        "❌ Safe Convoy",
+        "❌ Team Support",
+        "❌ Live Broadcast to All Users",
+      ],
+    },
+    {
+      id: 2,
+      name: "Basic",
+      price: 2000,
+      duration: "per month",
+      color: "#FFB800",
+      badge: "POPULAR",
+      contacts: "3 to 5 contacts",
+      priority: "⭐ VIP Alert",
+      features: [
+        "✅ Panic Button",
+        "✅ Location Sharing",
+        "✅ Security News Feed",
+        "✅ Up to 5 Emergency Contacts",
+        "✅ VIP Priority Alert",
+        "❌ Safe Convoy",
+        "❌ Team Support",
+        "❌ Live Broadcast to All Users",
+      ],
+    },
+    {
+      id: 3,
+      name: "Premium",
+      price: 3500,
+      duration: "per month",
+      color: "#FF2D2D",
+      badge: "BEST",
+      contacts: "5 to 10 contacts",
+      priority: "⭐⭐ VVIP Alert",
+      features: [
+        "✅ Panic Button",
+        "✅ Location Sharing",
+        "✅ Security News Feed",
+        "✅ Up to 10 Emergency Contacts",
+        "✅ VVIP Priority Alert",
+        "✅ Safe Convoy",
+        "✅ Team Support",
+        "✅ Live Broadcast to All Users",
+      ],
+    },
+  ];
+
+  const handleUpgrade = async (plan) => {
+    if (plan.price === 0) return;
+    setLoading(true);
+    setSelectedPlan(plan.id);
+
+    try {
+      const res = await fetch("https://api.flutterwave.com/v3/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_FLW_SECRET_KEY}`,
+        },
+        body: JSON.stringify({
+          tx_ref: `safealert-${session.user.id}-${Date.now()}`,
+          amount: plan.price,
+          currency: "NGN",
+          redirect_url: `${window.location.origin}?payment=success&plan=${plan.id}`,
+          customer: {
+            email: session.user.email,
+            name: session.user.user_metadata?.full_name || "SafeAlert User",
+          },
+          customizations: {
+            title: "SafeAlert NG Subscription",
+            description: `${plan.name} Plan - ₦${plan.price.toLocaleString()}/month`,
+            logo: "https://safealert-ng-git-main-safealertngs-projects.vercel.app/hero.png",
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (data.data?.link) {
+        window.location.href = data.data.link;
+      } else {
+        alert("Payment setup failed. Please try again.");
+      }
+    } catch (e) {
+      console.error("Payment error:", e);
+      alert("Payment error. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ background: "#0a0a0a", minHeight: "100vh", paddingBottom: 40 }}>
+      {/* Header */}
+      <div style={{
+        background: "#0d0d0d",
+        borderBottom: "1px solid #1a1a1a",
+        padding: "12px 16px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+      }}>
+        <button onClick={onBack} style={{
+          background: "none", border: "none", color: "#FF2D2D",
+          fontSize: 14, fontWeight: 700, cursor: "pointer", padding: 0,
+        }}>← Back</button>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", letterSpacing: 1 }}>
+          UPGRADE PLAN
+        </span>
+      </div>
+
+      {/* Hero */}
+      <div style={{ padding: "24px 16px 8px", textAlign: "center" }}>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          background: "#FF2D2D18", border: "1px solid #FF2D2D40",
+          borderRadius: 20, padding: "4px 12px", marginBottom: 12,
+        }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF2D2D", animation: "blink 0.9s ease-in-out infinite" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#FF2D2D", letterSpacing: 2 }}>STAY PROTECTED</span>
+        </div>
+        <h2 style={{ fontSize: 22, fontWeight: 900, color: "#fff", margin: "0 0 6px", lineHeight: 1.2 }}>
+          Choose Your Safety Plan
+        </h2>
+        <p style={{ fontSize: 12, color: "#666", margin: 0 }}>
+          Start free for 90 days. Upgrade anytime.
+        </p>
+      </div>
+
+      {/* Current Plan Badge */}
+      {currentPlan && (
+        <div style={{ margin: "12px 16px", background: "#00FF8810", border: "1px solid #00FF8830", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>✅</span>
+          <span style={{ fontSize: 12, color: "#00FF88", fontWeight: 700 }}>
+            Current Plan: {currentPlan.subscription_plans?.name} — expires {new Date(currentPlan.end_date).toLocaleDateString("en-NG")}
+          </span>
+        </div>
+      )}
+
+      {/* Plans */}
+      <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
+        {plans.map((plan) => (
+          <div key={plan.id} style={{
+            background: "#111",
+            border: `1px solid ${plan.color}40`,
+            borderRadius: 16,
+            overflow: "hidden",
+            position: "relative",
+            boxShadow: `0 0 20px ${plan.color}10`,
+          }}>
+            {/* Badge */}
+            {plan.badge && (
+              <div style={{
+                position: "absolute", top: 12, right: 12,
+                background: plan.color, color: "#000",
+                fontSize: 9, fontWeight: 900, letterSpacing: 1.5,
+                padding: "3px 8px", borderRadius: 6,
+              }}>{plan.badge}</div>
+            )}
+
+            {/* Plan Header */}
+            <div style={{ padding: "16px 16px 12px", borderBottom: `1px solid ${plan.color}20` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: plan.color }} />
+                <span style={{ fontSize: 18, fontWeight: 900, color: plan.color }}>{plan.name}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: "#fff" }}>
+                  {plan.price === 0 ? "FREE" : `₦${plan.price.toLocaleString()}`}
+                </span>
+                <span style={{ fontSize: 12, color: "#555" }}>{plan.duration}</span>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <span style={{ fontSize: 10, color: plan.color, background: `${plan.color}15`, padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>
+                  {plan.contacts}
+                </span>
+                <span style={{ fontSize: 10, color: plan.color, background: `${plan.color}15`, padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>
+                  {plan.priority}
+                </span>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div style={{ padding: "12px 16px" }}>
+              {plan.features.map((f, i) => (
+                <div key={i} style={{
+                  fontSize: 12, color: f.startsWith("✅") ? "#ccc" : "#444",
+                  padding: "4px 0", borderBottom: "1px solid #1a1a1a",
+                }}>{f}</div>
+              ))}
+            </div>
+
+            {/* CTA Button */}
+            <div style={{ padding: "0 16px 16px" }}>
+              <button
+                onClick={() => handleUpgrade(plan)}
+                disabled={loading && selectedPlan === plan.id || currentPlan?.subscription_plans?.name === plan.name}
+                style={{
+                  width: "100%",
+                  background: currentPlan?.subscription_plans?.name === plan.name
+                    ? "#1a1a1a"
+                    : plan.price === 0
+                    ? `${plan.color}20`
+                    : plan.color,
+                  border: `1px solid ${plan.color}`,
+                  borderRadius: 10,
+                  padding: "12px",
+                  color: currentPlan?.subscription_plans?.name === plan.name
+                    ? "#555"
+                    : plan.price === 0
+                    ? plan.color
+                    : "#000",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: currentPlan?.subscription_plans?.name === plan.name ? "default" : "pointer",
+                  letterSpacing: 0.5,
+                }}
+              >
+                {currentPlan?.subscription_plans?.name === plan.name
+                  ? "✓ Current Plan"
+                  : loading && selectedPlan === plan.id
+                  ? "Processing..."
+                  : plan.price === 0
+                  ? "Get Started Free"
+                  : `Upgrade to ${plan.name} — ₦${plan.price.toLocaleString()}/mo`}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer note */}
+      <div style={{ padding: "0 16px", textAlign: "center" }}>
+        <p style={{ fontSize: 11, color: "#444", lineHeight: 1.6 }}>
+          🔒 Payments secured by Flutterwave · Pay in Naira · Cancel anytime
+        </p>
+        <p style={{ fontSize: 11, color: "#444" }}>
+          Diaspora users pay Naira equivalent at current exchange rate
+        </p>
+      </div>
+    </div>
+  );
+}
