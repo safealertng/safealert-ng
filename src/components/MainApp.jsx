@@ -90,6 +90,7 @@ export default function MainApp({ session }) {
   const [nav, setNav] = useState("home");
   const [userPlan, setUserPlan] = useState("freemium");
   const [planExpired, setPlanExpired] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem("safealert_onboarded");
   });
@@ -200,6 +201,8 @@ export default function MainApp({ session }) {
       }
     };
     checkSubscription();
+    const adminCheck = await supabase.from("admin_roles").select("role").eq("user_id", session?.user?.id);
+    if (adminCheck?.data && adminCheck.data.length > 0) setIsAdminUser(true);
   }, [session]);
 
   useEffect(() => {
@@ -1154,7 +1157,7 @@ export default function MainApp({ session }) {
 
   if (nav === "plans") return <SubscriptionPlans session={session} onBack={() => setNav("profile")} />;
 
-  if (planExpired && nav !== "profile" && nav !== "plans" && nav !== "news") return (
+  if (planExpired && !isAdminUser && nav !== "profile" && nav !== "plans" && nav !== "news") return (
     <div style={{ background: "#0a0a0a", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ width: 70, height: 70, borderRadius: "50%", background: "#FF2D2D20", border: "2px solid #FF2D2D", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, marginBottom: 20 }}>🔒</div>
       <h2 style={{ fontSize: 22, fontWeight: 900, color: "#fff", textAlign: "center", marginBottom: 8 }}>Your Free Trial Has Ended</h2>
