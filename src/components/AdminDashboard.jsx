@@ -223,6 +223,61 @@ export default function AdminDashboard({ session, onBack }) {
           </div>
         </div>
 
+        <div style={A.sectionTitle}>MANAGE SUBSCRIBERS</div>
+        {subscribers.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#444", fontSize: 12, padding: "20px 0" }}>No subscribers yet</div>
+        ) : (
+          subscribers.map((sub) => (
+            <div key={sub.id} style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{sub.user_id}</div>
+                  <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
+                    Plan: <span style={{ color: sub.subscription_plans?.name === "Premium" ? "#FF2D2D" : sub.subscription_plans?.name === "Basic" ? "#FFB800" : "#00FF88", fontWeight: 700 }}>{sub.subscription_plans?.name}</span>
+                    {" · "}Status: <span style={{ color: sub.status === "active" ? "#00FF88" : "#FF2D2D", fontWeight: 700 }}>{sub.status}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>
+                    Expires: {sub.end_date ? new Date(sub.end_date).toLocaleDateString("en-NG") : "N/A"}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <select
+                    onChange={async (e) => {
+                      const newPlan = e.target.value;
+                      if (!newPlan) return;
+                      const { data: planData } = await supabase.from("subscription_plans").select("id").eq("name", newPlan).single();
+                      if (!planData) return;
+                      await supabase.from("user_subscriptions").update({ plan_id: planData.id, status: "active" }).eq("id", sub.id);
+                      await supabase.from("subscription_audit").insert({ admin_id: session?.user?.id, user_id: sub.user_id, action: "plan_change", old_plan: sub.subscription_plans?.name, new_plan: newPlan });
+                      showToast(`Plan updated to ${newPlan}`);
+                      fetchAll();
+                    }}
+                    defaultValue=""
+                    style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 6, color: "#fff", fontSize: 10, padding: "4px 8px", cursor: "pointer" }}
+                  >
+                    <option value="">Change Plan</option>
+                    <option value="Freemium">Freemium</option>
+                    <option value="Basic">Basic</option>
+                    <option value="Premium">Premium ⭐</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      const newStatus = sub.status === "active" ? "suspended" : "active";
+                      await supabase.from("user_subscriptions").update({ status: newStatus }).eq("id", sub.id);
+                      await supabase.from("subscription_audit").insert({ admin_id: session?.user?.id, user_id: sub.user_id, action: newStatus === "suspended" ? "suspended" : "reinstated", old_plan: sub.subscription_plans?.name, new_plan: sub.subscription_plans?.name });
+                      showToast(newStatus === "suspended" ? "User suspended" : "User reinstated", newStatus === "suspended" ? "#FF2D2D" : "#00FF88");
+                      fetchAll();
+                    }}
+                    style={{ background: sub.status === "active" ? "#FF2D2D20" : "#00FF8820", border: `1px solid ${sub.status === "active" ? "#FF2D2D" : "#00FF88"}`, borderRadius: 6, color: sub.status === "active" ? "#FF2D2D" : "#00FF88", fontSize: 10, padding: "4px 8px", cursor: "pointer", fontWeight: 700 }}
+                  >
+                    {sub.status === "active" ? "Suspend" : "Reinstate"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+
         <div style={A.sectionTitle}>RECENT INCIDENTS</div>
             {incidents.slice(0, 5).map(inc => (
               <div key={inc.id} style={A.row}>
