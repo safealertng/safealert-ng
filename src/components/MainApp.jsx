@@ -3036,6 +3036,22 @@ function SupportWidget({ session, isAdminUser }) {
     setLoading(false);
   };
 
+  const uploadFile = async (file) => {
+    if (!file) return null;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File too large. Maximum size is 5MB.");
+      return null;
+    }
+    const ext = file.name.split(".").pop();
+    const fileName = `${session.user.id}-${Date.now()}.${ext}`;
+    const { data, error } = await supabase.storage
+      .from("support-files")
+      .upload(fileName, file, { contentType: file.type });
+    if (error) { alert("Upload failed: " + error.message); return null; }
+    const { data: urlData } = supabase.storage.from("support-files").getPublicUrl(fileName);
+    return { url: urlData.publicUrl, type: file.type, name: file.name };
+  };
+
   const playSound = (type) => {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = ctx.createOscillator();
@@ -3173,7 +3189,13 @@ function SupportWidget({ session, isAdminUser }) {
             {messages.map(m => (
               <div key={m.id} style={{ marginBottom: 10, display: "flex", flexDirection: m.is_admin ? "row" : "row-reverse" }}>
                 <div style={{ maxWidth: "75%", background: m.is_admin ? "#1a1a1a" : "#FF2D2D20", border: `1px solid ${m.is_admin ? "#333" : "#FF2D2D40"}`, borderRadius: 10, padding: "8px 10px" }}>
-                  <div style={{ fontSize: 11, color: m.is_admin ? "#ccc" : "#fff" }}>{m.message}</div>
+                  {m.file_url && m.file_type?.startsWith("image/") && (
+                    <img src={m.file_url} alt={m.file_name} style={{ width: "100%", borderRadius: 8, marginBottom: 6, cursor: "pointer" }} onClick={() => window.open(m.file_url, "_blank")} />
+                  )}
+                  {m.file_url && m.file_type === "application/pdf" && (
+                    <a href={m.file_url} target="_blank" rel="noreferrer" style={{ display: "block", background: "#FF2D2D20", border: "1px solid #FF2D2D40", borderRadius: 8, padding: "6px 10px", color: "#FF2D2D", fontSize: 11, marginBottom: 6, textDecoration: "none" }}>📄 {m.file_name}</a>
+                  )}
+                  {!m.file_url && <div style={{ fontSize: 11, color: m.is_admin ? "#ccc" : "#fff" }}>{m.message}</div>}
                   <div style={{ fontSize: 9, color: "#444", marginTop: 4 }}>{m.is_admin ? "Support" : "You"} · {new Date(m.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
                 </div>
               </div>
@@ -3200,6 +3222,24 @@ function SupportWidget({ session, isAdminUser }) {
       {/* Message Input for Chat */}
       {view === "chat" && (
         <div style={{ padding: "10px 12px", borderTop: "1px solid #1a1a1a", display: "flex", gap: 8 }}>
+          <input type="file" id="support-file-input" accept="image/jpeg,image/png,application/pdf" style={{ display: "none" }} onChange={async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const uploaded = await uploadFile(file);
+            if (!uploaded) return;
+            const { data } = await supabase.from("support_messages").insert({
+              ticket_id: activeTicket.id,
+              sender_id: session.user.id,
+              message: uploaded.name,
+              is_admin: false,
+              file_url: uploaded.url,
+              file_type: uploaded.type,
+              file_name: uploaded.name,
+            }).select().single();
+            if (data) { setMessages(prev => [...prev, data]); playSound("send"); }
+            e.target.value = "";
+          }} />
+          <button onClick={() => document.getElementById("support-file-input").click()} style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: "8px 10px", color: "#888", fontSize: 14, cursor: "pointer" }}>📎</button>
           <input
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
