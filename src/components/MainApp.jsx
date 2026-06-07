@@ -186,8 +186,30 @@ export default function MainApp({ session }) {
         .eq("status", "active")
         .single();
       if (!data) {
-        setPlanExpired(true);
-        setUserPlan("none");
+        // Auto-enroll new user into Freemium plan
+        const { data: freemiumPlan } = await supabase
+          .from("subscription_plans")
+          .select("id")
+          .eq("name", "Freemium")
+          .single();
+        if (freemiumPlan) {
+          const endDate = new Date();
+          endDate.setDate(endDate.getDate() + 90);
+          await supabase.from("user_subscriptions").insert({
+            user_id: session.user.id,
+            plan_id: freemiumPlan.id,
+            status: "active",
+            start_date: new Date().toISOString(),
+            end_date: endDate.toISOString(),
+            amount_paid: 0,
+            is_complimentary: false,
+          });
+          setPlanExpired(false);
+          setUserPlan("freemium");
+        } else {
+          setPlanExpired(true);
+          setUserPlan("none");
+        }
       } else {
         const now = new Date();
         const end = new Date(data.end_date);
