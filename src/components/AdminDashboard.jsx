@@ -489,7 +489,13 @@ const fileName = pathParts[1] || inc.video_url.split("/").pop();
                   {ticketMessages.map(m => (
                     <div key={m.id} style={{ marginBottom: 10, display: "flex", flexDirection: m.is_admin ? "row" : "row-reverse" }}>
                       <div style={{ maxWidth: "75%", background: m.is_admin ? "#1a1a1a" : "#FF2D2D20", border: `1px solid ${m.is_admin ? "#333" : "#FF2D2D40"}`, borderRadius: 10, padding: "8px 10px" }}>
-                        <div style={{ fontSize: 11, color: m.is_admin ? "#ccc" : "#fff" }}>{m.message}</div>
+                        {m.file_url && m.file_type?.startsWith("image/") && (
+                        <img src={m.file_url} alt={m.file_name} style={{ width: "100%", borderRadius: 8, marginBottom: 6, cursor: "pointer" }} onClick={() => window.open(m.file_url, "_blank")} />
+                      )}
+                      {m.file_url && m.file_type === "application/pdf" && (
+                        <a href={m.file_url} target="_blank" rel="noreferrer" style={{ display: "block", background: "#FF2D2D20", border: "1px solid #FF2D2D40", borderRadius: 8, padding: "6px 10px", color: "#FF2D2D", fontSize: 11, marginBottom: 6, textDecoration: "none" }}>📄 {m.file_name}</a>
+                      )}
+                      {!m.file_url && <div style={{ fontSize: 11, color: m.is_admin ? "#ccc" : "#fff" }}>{m.message}</div>}
                         <div style={{ fontSize: 9, color: "#444", marginTop: 4 }}>{m.is_admin ? "Support" : "User"} · {new Date(m.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
                       </div>
                     </div>
