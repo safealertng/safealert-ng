@@ -193,6 +193,12 @@ export default function MainApp({ session }) {
           .eq("name", "Freemium")
           .single();
         if (freemiumPlan) {
+          // Check if already enrolled to prevent duplicates
+          const { data: existing } = await supabase
+            .from("user_subscriptions")
+            .select("id")
+            .eq("user_id", session.user.id);
+          if (existing && existing.length > 0) return;
           const endDate = new Date();
           endDate.setDate(endDate.getDate() + 90);
           await supabase.from("user_subscriptions").insert({
