@@ -3001,7 +3001,13 @@ function SupportWidget({ session, isAdminUser }) {
     const { data } = await supabase.from("support_messages")
       .select("*").eq("ticket_id", ticketId)
       .order("created_at", { ascending: true });
-    if (data) setMessages(data);
+    if (data) {
+      const prevCount = messages.length;
+      setMessages(data);
+      if (data.length > prevCount && data[data.length - 1]?.is_admin) {
+        playSound("receive");
+      }
+    }
   };
 
   const createTicket = async () => {
@@ -3030,6 +3036,25 @@ function SupportWidget({ session, isAdminUser }) {
     setLoading(false);
   };
 
+  const playSound = (type) => {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    if (type === "send") {
+      oscillator.frequency.setValueAtTime(600, ctx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+    } else {
+      oscillator.frequency.setValueAtTime(400, ctx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.15);
+    }
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.3);
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !activeTicket) return;
     const { data } = await supabase.from("support_messages").insert({
@@ -3038,7 +3063,10 @@ function SupportWidget({ session, isAdminUser }) {
       message: newMessage,
       is_admin: false,
     }).select().single();
-    if (data) setMessages(prev => [...prev, data]);
+    if (data) {
+      setMessages(prev => [...prev, data]);
+      playSound("send");
+    }
     setNewMessage("");
   };
 
