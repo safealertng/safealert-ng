@@ -3141,7 +3141,7 @@ function SupportWidget({ session, isAdminUser }) {
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <button onClick={() => setView("tickets")} style={{ background: "none", border: "none", color: "#FF2D2D", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back</button>
             <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>{activeTicket.category} · <span style={{ color: statusColor(activeTicket.status) }}>{activeTicket.status}</span></div>
-            <div style={{ flex: 1, overflowY: "auto", marginBottom: 8 }}>
+            <div style={{ flex: 1, overflowY: "scroll", marginBottom: 8, scrollbarWidth: "thin", scrollbarColor: "#FF2D2D #1a1a1a" }}>
             {messages.map(m => (
               <div key={m.id} style={{ marginBottom: 10, display: "flex", flexDirection: m.is_admin ? "row" : "row-reverse" }}>
                 <div style={{ maxWidth: "75%", background: m.is_admin ? "#1a1a1a" : "#FF2D2D20", border: `1px solid ${m.is_admin ? "#333" : "#FF2D2D40"}`, borderRadius: 10, padding: "8px 10px" }}>
