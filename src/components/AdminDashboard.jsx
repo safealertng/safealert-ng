@@ -21,6 +21,10 @@ export default function AdminDashboard({ session, onBack }) {
   const [toast, setToast] = useState(null);
   const [checkpoints, setCheckpoints] = useState([]);
   const [pendingNews, setPendingNews] = useState([]);
+  const [supportTickets, setSupportTickets] = useState([]);
+  const [activeTicket, setActiveTicket] = useState(null);
+  const [ticketMessages, setTicketMessages] = useState([]);
+  const [adminReply, setAdminReply] = useState("");
   const [subCounts, setSubCounts] = useState({ freemium: 0, basic: 0, premium: 0 });
   const [subscribers, setSubscribers] = useState([]);
 
@@ -51,7 +55,7 @@ export default function AdminDashboard({ session, onBack }) {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, subsRes] = await Promise.all([
+    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, subsRes, supportRes] = await Promise.all([
       supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
@@ -60,9 +64,11 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("checkpoint_reports").select("*").order("created_at", { ascending: false }),
       supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("user_subscriptions").select("*, subscription_plans(*)").order("created_at", { ascending: false }),
+      supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
+    if (supportRes.data) setSupportTickets(supportRes.data);
     if (subsRes.data) {
       setSubscribers(subsRes.data);
       setSubCounts({
@@ -178,6 +184,7 @@ export default function AdminDashboard({ session, onBack }) {
           ["panics", "🆘 Panics"],
           ["checkpoints", "🚧 Checkpoints"],
           ["pending", `📰 Pending${pendingNews.length > 0 ? ` (${pendingNews.length})` : ""}`],
+          ["support", `💬 Support${supportTickets.length > 0 ? ` (${supportTickets.length})` : ""}`],
           ...(adminRole === "super_admin" ? [["roles", "🔐 Roles"]] : []),
           ...(adminRole === "super_admin" ? [["subscriptions", "💳 Subscriptions"]] : []),
         ].map(([k, l]) => (
@@ -452,6 +459,68 @@ const fileName = pathParts[1] || inc.video_url.split("/").pop();
         )}
 
         {/* ROLES — Super Admin only */}
+        {nav === "support" && (
+          <div>
+            <div style={A.sectionTitle}>SUPPORT TICKETS</div>
+            {!activeTicket ? (
+              <div>
+                {supportTickets.length === 0 ? (
+                  <div style={{ textAlign: "center", color: "#444", fontSize: 12, padding: "20px 0" }}>No support tickets yet</div>
+                ) : supportTickets.map(t => (
+                  <div key={t.id} onClick={async () => {
+                    setActiveTicket(t);
+                    const { data } = await supabase.from("support_messages").select("*").eq("ticket_id", t.id).order("created_at", { ascending: true });
+                    if (data) setTicketMessages(data);
+                  }} style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px", marginBottom: 10, cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{t.category}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: t.status === "open" ? "#FFB800" : t.status === "resolved" ? "#00FF88" : "#FF2D2D" }}>{t.status.toUpperCase()}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>{t.subject?.substring(0, 60)}...</div>
+                    <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>{new Date(t.created_at).toLocaleDateString("en-NG")}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <button onClick={() => { setActiveTicket(null); setTicketMessages([]); }} style={{ background: "none", border: "none", color: "#FF2D2D", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back to Tickets</button>
+                <div style={{ fontSize: 11, color: "#555", marginBottom: 8 }}>{activeTicket.category} · <span style={{ color: "#FFB800" }}>{activeTicket.status}</span></div>
+                <div style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 12, padding: 12, marginBottom: 12, maxHeight: 300, overflowY: "auto" }}>
+                  {ticketMessages.map(m => (
+                    <div key={m.id} style={{ marginBottom: 10, display: "flex", flexDirection: m.is_admin ? "row" : "row-reverse" }}>
+                      <div style={{ maxWidth: "75%", background: m.is_admin ? "#1a1a1a" : "#FF2D2D20", border: `1px solid ${m.is_admin ? "#333" : "#FF2D2D40"}`, borderRadius: 10, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 11, color: m.is_admin ? "#ccc" : "#fff" }}>{m.message}</div>
+                        <div style={{ fontSize: 9, color: "#444", marginTop: 4 }}>{m.is_admin ? "Support" : "User"} · {new Date(m.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <input value={adminReply} onChange={e => setAdminReply(e.target.value)} placeholder="Type your reply..." style={{ flex: 1, background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: "8px 10px", color: "#fff", fontSize: 12 }} />
+                  <button onClick={async () => {
+                    if (!adminReply.trim()) return;
+                    await supabase.from("support_messages").insert({ ticket_id: activeTicket.id, sender_id: session?.user?.id, message: adminReply, is_admin: true });
+                    setTicketMessages(prev => [...prev, { id: Date.now(), ticket_id: activeTicket.id, message: adminReply, is_admin: true, created_at: new Date().toISOString() }]);
+                    setAdminReply("");
+                  }} style={{ background: "#FF2D2D", border: "none", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 14, cursor: "pointer" }}>➤</button>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={async () => {
+                    await supabase.from("support_tickets").update({ status: "resolved" }).eq("id", activeTicket.id);
+                    setActiveTicket({ ...activeTicket, status: "resolved" });
+                    showToast("Ticket marked as resolved");
+                  }} style={{ flex: 1, background: "#00FF8820", border: "1px solid #00FF88", borderRadius: 8, padding: "8px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✅ Mark Resolved</button>
+                  <button onClick={async () => {
+                    await supabase.from("support_tickets").update({ status: "closed" }).eq("id", activeTicket.id);
+                    setActiveTicket({ ...activeTicket, status: "closed" });
+                    showToast("Ticket closed", "#FF2D2D");
+                  }} style={{ flex: 1, background: "#FF2D2D20", border: "1px solid #FF2D2D", borderRadius: 8, padding: "8px", color: "#FF2D2D", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>🔴 Close Ticket</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {nav === "roles" && adminRole === "super_admin" && (
           <div>
             <div style={A.sectionTitle}>ROLE MANAGEMENT</div>
