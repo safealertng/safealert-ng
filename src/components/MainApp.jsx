@@ -261,6 +261,7 @@ export default function MainApp({ session }) {
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
   const [nearbyAlerts, setNearbyAlerts] = useState([]);
+  const [alertsFilter, setAlertsFilter] = useState("nearby");
   const agoraVideoRef = useRef(null);
 
   const reverseGeocode = async (lat, lng) => {
@@ -490,15 +491,13 @@ export default function MainApp({ session }) {
   }, [videoSaved]);
 
   useEffect(() => {
-    const fetchNearbyAlerts = async () => {
-      const { data, error } = await supabase
-        .from("incidents")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
+    const fetchNearbyAlerts = async (filter = "nearby") => {
+      let query = supabase.from("incidents").select("*").order("created_at", { ascending: false }).limit(5);
+      if (filter === "state") query = query.eq("state", session?.user?.user_metadata?.state || "Lagos");
+      const { data, error } = await query;
       if (!error && data) setNearbyAlerts(data);
     };
-    fetchNearbyAlerts();
+    fetchNearbyAlerts(alertsFilter);
     const channel = supabase
       .channel("nearby-alerts")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
@@ -1318,6 +1317,28 @@ export default function MainApp({ session }) {
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
           <MicroLabel>NEARBY ALERTS</MicroLabel>
           <button onClick={() => setNav("alerts")} style={{ background: "none", border: "none", color: "#FFB800", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700 }}>See All →</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          {["nearby", "state", "national"].map(f => (
+            <button key={f} onClick={() => {
+              setAlertsFilter(f);
+              const fetchFiltered = async () => {
+                let query = supabase.from("incidents").select("*").order("created_at", { ascending: false }).limit(5);
+                if (f === "state") query = query.eq("state", session?.user?.user_metadata?.state || "Lagos");
+                const { data, error } = await query;
+                if (!error && data) setNearbyAlerts(data);
+              };
+              fetchFiltered();
+            }} style={{
+              background: alertsFilter === f ? "#FF2D2D" : "transparent",
+              border: `1px solid ${alertsFilter === f ? "#FF2D2D" : "#333"}`,
+              borderRadius: 20, padding: "3px 12px",
+              color: alertsFilter === f ? "#fff" : "#555",
+              fontSize: 10, fontWeight: 700, cursor: "pointer",
+              fontFamily: "'Barlow Condensed', sans-serif",
+              letterSpacing: 1, textTransform: "uppercase",
+            }}>{f === "nearby" ? "📍 Nearby" : f === "state" ? "🗺️ My State" : "🇳🇬 National"}</button>
+          ))}
         </div>
         {nearbyAlerts.length > 0 ? nearbyAlerts.slice(0, 2).map(a => (
           <div key={a.id} style={{ display: "flex", gap: 9, marginBottom: 8, alignItems: "flex-start" }}>
