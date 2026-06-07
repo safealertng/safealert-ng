@@ -2216,11 +2216,7 @@ function LiveAlertsScreen({ session }) {
           <button key={v} onClick={() => setFilterType(v)} style={{ flexShrink: 0, borderRadius: 20, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", background: filterType === v ? "#FF2D2D22" : "#0d0d0d", color: filterType === v ? "#FF2D2D" : "#555", border: `1px solid ${filterType === v ? "#FF2D2D55" : "#1a1a1a"}` }}>{l}</button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 6, padding: "8px 16px 0", overflowX: "auto" }}>
-        {["all", "Lagos", "Abuja", "Rivers", "Kaduna", "Kano", "Borno", "Zamfara"].map(v => (
-          <button key={v} onClick={() => setFilterState(v)} style={{ flexShrink: 0, borderRadius: 20, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", background: filterState === v ? "#FFB80022" : "#0d0d0d", color: filterState === v ? "#FFB800" : "#555", border: `1px solid ${filterState === v ? "#FFB80055" : "#1a1a1a"}` }}>{v === "all" ? "🗺️ All States" : v}</button>
-        ))}
-      </div>
+      
       <div style={{ padding: "10px 16px 0" }}>
         {filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#333" }}>
