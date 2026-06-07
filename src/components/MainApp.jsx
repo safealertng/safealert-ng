@@ -2202,6 +2202,15 @@ function LiveAlertsScreen({ session }) {
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by type or location..." style={{ flex: 1, background: "none", border: "none", color: "#ccc", fontSize: 13, outline: "none", fontFamily: "'Barlow Condensed',sans-serif" }} />
         {search && <button onClick={() => setSearch("")} style={{ background: "none", border: "none", color: "#444", cursor: "pointer" }}>✕</button>}
       </div>
+      <div style={{ display: "flex", gap: 6, padding: "10px 16px 6px", overflowX: "auto" }}>
+        {["nearby", "state", "national"].map(f => (
+          <button key={f} onClick={() => {
+            setFilterState(f === "national" ? "all" : f === "state" ? (session?.user?.user_metadata?.state || "Lagos") : "nearby");
+          }} style={{ flexShrink: 0, borderRadius: 20, padding: "5px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", background: (f === "national" && filterState === "all") || (f === "state" && filterState === (session?.user?.user_metadata?.state || "Lagos")) || (f === "nearby" && filterState === "nearby") ? "#FF2D2D" : "transparent", color: (f === "national" && filterState === "all") || (f === "state" && filterState === (session?.user?.user_metadata?.state || "Lagos")) || (f === "nearby" && filterState === "nearby") ? "#fff" : "#555", border: `1px solid ${(f === "national" && filterState === "all") ? "#FF2D2D" : "#333"}` }}>
+            {f === "nearby" ? "📍 Nearby" : f === "state" ? "🗺️ My State" : "🇳🇬 National"}
+          </button>
+        ))}
+      </div>
       <div style={{ display: "flex", gap: 6, padding: "10px 16px 0", overflowX: "auto" }}>
         {[["all", "All"], ["kidnapping", "🚨 Kidnap"], ["robbery", "🔫 Robbery"], ["suspicious", "👁️ Suspicious"], ["attack", "⚠️ Attack"], ["banditry", "🏕️ Banditry"], ["terrorism", "💣 Terror"]].map(([v, l]) => (
           <button key={v} onClick={() => setFilterType(v)} style={{ flexShrink: 0, borderRadius: 20, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", background: filterType === v ? "#FF2D2D22" : "#0d0d0d", color: filterType === v ? "#FF2D2D" : "#555", border: `1px solid ${filterType === v ? "#FF2D2D55" : "#1a1a1a"}` }}>{l}</button>
