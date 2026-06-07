@@ -201,8 +201,11 @@ export default function MainApp({ session }) {
       }
     };
     checkSubscription();
-    const adminCheck = await supabase.from("admin_roles").select("role").eq("user_id", session?.user?.id);
-    if (adminCheck?.data && adminCheck.data.length > 0) setIsAdminUser(true);
+    const checkAdmin = async () => {
+      const adminCheck = await supabase.from("admin_roles").select("role").eq("user_id", session?.user?.id);
+      if (adminCheck?.data && adminCheck.data.length > 0) setIsAdminUser(true);
+    };
+    checkAdmin();
   }, [session]);
 
   useEffect(() => {
