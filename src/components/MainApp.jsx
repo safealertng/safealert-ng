@@ -3150,6 +3150,7 @@ function SupportWidget({ session, isAdminUser }) {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         )}
 
@@ -3166,7 +3167,6 @@ function SupportWidget({ session, isAdminUser }) {
             ))}
           </div>
         )}
-            </div>
       </div>
 
       {/* Message Input for Chat */}
