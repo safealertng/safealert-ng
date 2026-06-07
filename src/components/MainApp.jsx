@@ -1214,6 +1214,7 @@ export default function MainApp({ session }) {
   // ── HOME ──────────────────────────────────────────────────────────────────
   return (
     <Shell shakeFlash={shakeFlash}>
+      <SupportWidget session={session} isAdminUser={isAdminUser} />
       <div style={S.header}>
         <div>
           <div style={S.logo}>SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
@@ -2955,6 +2956,233 @@ const S = {
   natBtn: { flex: 1, background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: "12px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" },
   savedBanner: { margin: "12px 14px 0", width: "calc(100% - 28px)", background: "#00FF8808", border: "1px solid #00FF8820", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" },
 };
+
+function SupportWidget({ session, isAdminUser }) {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState("home");
+  const [tickets, setTickets] = useState([]);
+  const [activeTicket, setActiveTicket] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [category, setCategory] = useState("");
+  const [subject, setSubject] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const CATEGORIES = [
+    { icon: "🔧", label: "Technical Issue" },
+    { icon: "💳", label: "Billing/Subscription" },
+    { icon: "👤", label: "Account Issue" },
+    { icon: "🚨", label: "Safety Concern" },
+    { icon: "💡", label: "Feature Request" },
+    { icon: "🔴", label: "Other" },
+  ];
+
+  const FAQS = [
+    { q: "How do I use the Panic Button?", a: "Hold the red PANIC button on the home screen for 2 seconds to trigger an emergency alert to all your contacts." },
+    { q: "How do I add emergency contacts?", a: "Tap the + icon near the contact avatars on the home screen. Contacts must be registered SafeAlertNG users with valid mobile numbers." },
+    { q: "How do subscription plans work?", a: "You get 90 days free (Freemium). After that, upgrade to Basic (₦2,000/mo) or Premium (₦3,500/mo) to keep full access." },
+    { q: "What is Safe Convoy?", a: "Safe Convoy is a Premium feature that lets a group travel together safely. If anyone triggers panic, all convoy members are alerted." },
+    { q: "Why am I not receiving alerts?", a: "Make sure you have push notifications enabled for SafeAlertNG in your phone settings. Also check your internet connection." },
+    { q: "How do I cancel my subscription?", a: "Contact support via this chat and we will process your cancellation within 24 hours." },
+  ];
+
+  useEffect(() => {
+    if (open && session?.user?.id) fetchTickets();
+  }, [open]);
+
+  const fetchTickets = async () => {
+    const { data } = await supabase.from("support_tickets")
+      .select("*").eq("user_id", session.user.id)
+      .order("created_at", { ascending: false });
+    if (data) setTickets(data);
+  };
+
+  const fetchMessages = async (ticketId) => {
+    const { data } = await supabase.from("support_messages")
+      .select("*").eq("ticket_id", ticketId)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data);
+  };
+
+  const createTicket = async () => {
+    if (!category || !subject) return;
+    setLoading(true);
+    const { data } = await supabase.from("support_tickets").insert({
+      user_id: session.user.id,
+      category,
+      subject,
+      status: "open",
+    }).select().single();
+    if (data) {
+      await supabase.from("support_messages").insert({
+        ticket_id: data.id,
+        sender_id: session.user.id,
+        message: subject,
+        is_admin: false,
+      });
+      setTickets(prev => [data, ...prev]);
+      setActiveTicket(data);
+      fetchMessages(data.id);
+      setView("chat");
+      setCategory("");
+      setSubject("");
+    }
+    setLoading(false);
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !activeTicket) return;
+    const { data } = await supabase.from("support_messages").insert({
+      ticket_id: activeTicket.id,
+      sender_id: session.user.id,
+      message: newMessage,
+      is_admin: false,
+    }).select().single();
+    if (data) setMessages(prev => [...prev, data]);
+    setNewMessage("");
+  };
+
+  const statusColor = (s) => s === "open" ? "#FFB800" : s === "resolved" ? "#00FF88" : "#FF2D2D";
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)} style={{
+      position: "fixed", bottom: 80, right: 16, width: 52, height: 52,
+      borderRadius: "50%", background: "#FF2D2D", border: "none",
+      cursor: "pointer", fontSize: 22, zIndex: 1000,
+      boxShadow: "0 4px 20px #FF2D2D55",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>💬</button>
+  );
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 80, right: 16, width: 320, height: 480,
+      background: "#0d0d0d", border: "1px solid #222", borderRadius: 16,
+      zIndex: 1000, display: "flex", flexDirection: "column",
+      boxShadow: "0 8px 40px #00000088",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <div style={{ background: "#111", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #1a1a1a" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>SafeAlert Support</div>
+          <div style={{ fontSize: 10, color: "#00FF88" }}>● Online</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16 }}>🏠</button>
+          <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16 }}>✕</button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+
+        {/* Home View */}
+        {view === "home" && (
+          <div>
+            <p style={{ fontSize: 12, color: "#888", marginBottom: 16 }}>Hi there! How can we help you today?</p>
+            <button onClick={() => setView("new")} style={{ width: "100%", background: "#FF2D2D", border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>
+              ✉️ New Support Ticket
+            </button>
+            <button onClick={() => setView("tickets")} style={{ width: "100%", background: "#1a1a1a", border: "1px solid #333", borderRadius: 10, padding: "10px", color: "#ccc", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 10 }}>
+              📋 My Tickets {tickets.length > 0 && `(${tickets.length})`}
+            </button>
+            <button onClick={() => setView("faq")} style={{ width: "100%", background: "#1a1a1a", border: "1px solid #333", borderRadius: 10, padding: "10px", color: "#ccc", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              ❓ FAQ / Help Center
+            </button>
+          </div>
+        )}
+
+        {/* New Ticket View */}
+        {view === "new" && (
+          <div>
+            <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#FF2D2D", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back</button>
+            <p style={{ fontSize: 12, color: "#888", marginBottom: 12 }}>Select a category:</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+              {CATEGORIES.map(c => (
+                <button key={c.label} onClick={() => setCategory(c.label)} style={{ background: category === c.label ? "#FF2D2D20" : "#1a1a1a", border: `1px solid ${category === c.label ? "#FF2D2D" : "#333"}`, borderRadius: 8, padding: "6px 10px", color: category === c.label ? "#FF2D2D" : "#888", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>
+                  {c.icon} {c.label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              placeholder="Describe your issue..."
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              style={{ width: "100%", background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: 10, color: "#fff", fontSize: 12, minHeight: 80, resize: "none", marginBottom: 12 }}
+            />
+            <button onClick={createTicket} disabled={loading} style={{ width: "100%", background: "#FF2D2D", border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>
+              {loading ? "Sending..." : "Submit Ticket"}
+            </button>
+          </div>
+        )}
+
+        {/* Tickets List View */}
+        {view === "tickets" && (
+          <div>
+            <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#FF2D2D", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back</button>
+            {tickets.length === 0 ? (
+              <p style={{ fontSize: 12, color: "#555", textAlign: "center", marginTop: 20 }}>No tickets yet</p>
+            ) : tickets.map(t => (
+              <div key={t.id} onClick={() => { setActiveTicket(t); fetchMessages(t.id); setView("chat"); }} style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 10, padding: "10px 12px", marginBottom: 8, cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{t.category}</span>
+                  <span style={{ fontSize: 10, color: statusColor(t.status), fontWeight: 700 }}>{t.status.toUpperCase()}</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>{t.subject.substring(0, 50)}...</div>
+                <div style={{ fontSize: 10, color: "#444", marginTop: 4 }}>{new Date(t.created_at).toLocaleDateString("en-NG")}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Chat View */}
+        {view === "chat" && activeTicket && (
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <button onClick={() => setView("tickets")} style={{ background: "none", border: "none", color: "#FF2D2D", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back</button>
+            <div style={{ fontSize: 11, color: "#555", marginBottom: 12 }}>{activeTicket.category} · <span style={{ color: statusColor(activeTicket.status) }}>{activeTicket.status}</span></div>
+            {messages.map(m => (
+              <div key={m.id} style={{ marginBottom: 10, display: "flex", flexDirection: m.is_admin ? "row" : "row-reverse" }}>
+                <div style={{ maxWidth: "75%", background: m.is_admin ? "#1a1a1a" : "#FF2D2D20", border: `1px solid ${m.is_admin ? "#333" : "#FF2D2D40"}`, borderRadius: 10, padding: "8px 10px" }}>
+                  <div style={{ fontSize: 11, color: m.is_admin ? "#ccc" : "#fff" }}>{m.message}</div>
+                  <div style={{ fontSize: 9, color: "#444", marginTop: 4 }}>{m.is_admin ? "Support" : "You"} · {new Date(m.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* FAQ View */}
+        {view === "faq" && (
+          <div>
+            <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#FF2D2D", fontSize: 12, fontWeight: 700, cursor: "pointer", marginBottom: 12, padding: 0 }}>← Back</button>
+            <p style={{ fontSize: 12, color: "#888", marginBottom: 12 }}>Frequently Asked Questions</p>
+            {FAQS.map((f, i) => (
+              <details key={i} style={{ background: "#1a1a1a", border: "1px solid #222", borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
+                <summary style={{ fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" }}>{f.q}</summary>
+                <p style={{ fontSize: 11, color: "#888", marginTop: 8, lineHeight: 1.6 }}>{f.a}</p>
+              </details>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Message Input for Chat */}
+      {view === "chat" && (
+        <div style={{ padding: "10px 12px", borderTop: "1px solid #1a1a1a", display: "flex", gap: 8 }}>
+          <input
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendMessage()}
+            placeholder="Type a message..."
+            style={{ flex: 1, background: "#1a1a1a", border: "1px solid #333", borderRadius: 8, padding: "8px 10px", color: "#fff", fontSize: 12 }}
+          />
+          <button onClick={sendMessage} style={{ background: "#FF2D2D", border: "none", borderRadius: 8, padding: "8px 12px", color: "#fff", fontSize: 14, cursor: "pointer" }}>➤</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&display=swap');
