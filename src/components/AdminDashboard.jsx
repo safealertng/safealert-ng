@@ -63,19 +63,14 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("family_members").select("count", { count: "exact" }),
       supabase.from("checkpoint_reports").select("*").order("created_at", { ascending: false }),
       supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("user_subscriptions").select("*, subscription_plans(*)").order("created_at", { ascending: false }),
+      supabase.from("subscriber_details").select("*, subscription_plans(plan_id, name, price)").order("created_at", { ascending: false }),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
     if (supportRes.data) setSupportTickets(supportRes.data);
     if (subsRes.data) {
-      const userIds = subsRes.data.map(s => s.user_id);
-      const { data: usersData } = await supabase.from("admin_users").select("user_id, full_name, email").in("user_id", userIds);
-      const usersMap = {};
-      if (usersData) usersData.forEach(u => { usersMap[u.user_id] = u; });
-      const enriched = subsRes.data.map(s => ({ ...s, user_info: usersMap[s.user_id] || null }));
-      setSubscribers(enriched);
+      setSubscribers(subsRes.data);
       setSubCounts({
         freemium: subsRes.data.filter(s => s.subscription_plans?.name === "Freemium").length,
         basic: subsRes.data.filter(s => s.subscription_plans?.name === "Basic").length,
@@ -243,7 +238,7 @@ export default function AdminDashboard({ session, onBack }) {
             <div key={sub.id} style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{sub.user_info?.email || "Unknown User"}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{sub.email || "Unknown User"}</div>
 <div style={{ fontSize: 11, color: "#555", marginTop: 2, fontFamily: "monospace" }}>{sub.user_id?.substring(0, 16)}...</div>
                   <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
                     Plan: <span style={{ color: sub.subscription_plans?.name === "Premium" ? "#FF2D2D" : sub.subscription_plans?.name === "Basic" ? "#FFB800" : "#00FF88", fontWeight: 700 }}>{sub.subscription_plans?.name}</span>
