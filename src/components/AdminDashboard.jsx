@@ -55,7 +55,7 @@ export default function AdminDashboard({ session, onBack }) {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, subsRes, supportRes] = await Promise.all([
+    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, supportRes, subsRes] = await Promise.all([
       supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
@@ -63,8 +63,8 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("family_members").select("count", { count: "exact" }),
       supabase.from("checkpoint_reports").select("*").order("created_at", { ascending: false }),
       supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("subscriber_details").select("*").order("created_at", { ascending: false }),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
+      supabase.from("subscriber_details").select("*").order("created_at", { ascending: false }),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
