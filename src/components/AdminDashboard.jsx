@@ -69,12 +69,13 @@ export default function AdminDashboard({ session, onBack }) {
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
     if (supportRes.data) setSupportTickets(supportRes.data);
-    if (subsRes.data) {
-      setSubscribers(subsRes.data);
+    const subData = subsRes.data || [];
+      if (subData) {
+      setSubscribers(subData);
       setSubCounts({
-        freemium: subsRes.data.filter(s => s.plan_id === 1 && s.status === "active").length,
-        basic: subsRes.data.filter(s => s.plan_id === 2 && s.status === "active").length,
-        premium: subsRes.data.filter(s => s.plan_id === 3 && s.status === "active").length,
+        freemium: subData.filter(s => s.plan_id === 1 && s.status === "active").length,
+        basic: subData.filter(s => s.plan_id === 2 && s.status === "active").length,
+        premium: subData.filter(s => s.plan_id === 3 && s.status === "active").length,
       });
     }
     if (usersRes.data) setUsers(usersRes.data);
