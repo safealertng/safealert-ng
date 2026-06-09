@@ -64,7 +64,7 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("checkpoint_reports").select("*").order("created_at", { ascending: false }),
       supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
-      supabase.from("subscriber_details").select("*").order("created_at", { ascending: false }),
+      supabase.rpc("get_subscribers_with_email"),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
