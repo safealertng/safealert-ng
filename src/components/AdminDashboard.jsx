@@ -72,9 +72,9 @@ export default function AdminDashboard({ session, onBack }) {
     if (subsRes.data) {
       setSubscribers(subsRes.data);
       setSubCounts({
-        freemium: subsRes.data.filter(s => s.subscription_plans?.name === "Freemium").length,
-        basic: subsRes.data.filter(s => s.subscription_plans?.name === "Basic").length,
-        premium: subsRes.data.filter(s => s.subscription_plans?.name === "Premium").length,
+        freemium: subsRes.data.filter(s => s.plan_id === 1 && s.status === "active").length,
+        basic: subsRes.data.filter(s => s.plan_id === 2 && s.status === "active").length,
+        premium: subsRes.data.filter(s => s.plan_id === 3 && s.status === "active").length,
       });
     }
     if (usersRes.data) setUsers(usersRes.data);
