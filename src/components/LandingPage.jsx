@@ -121,7 +121,7 @@ export default function LandingPage({ onGetStarted }) {
             <div style={{ background: "#00AA4411", border: "1px solid #00AA4433", borderRadius: 12, padding: 24, color: "#00FF88", fontSize: 15, fontWeight: 700, marginBottom: 24 }}>
               ✅ You're in! We'll keep you posted.
             </div>
-            <button onClick={onGetStarted} style={{ width: "100%", background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 16, fontWeight: 900, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", boxShadow: "0 6px 28px #FF2D2D44" }}>
+            <button onClick={onGetStarted} style={{ width: "100%", background: "linear-gradient(135deg,#FFB800,#aa7700)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 16, fontWeight: 900, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", boxShadow: "0 6px 28px #FF2D2D44" }}>
               🛡️ CREATE MY ACCOUNT
               <button onClick={onGetStarted} style={{ width: "100%", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 12, padding: "16px", color: "#666", fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", marginTop: 10 }}>
   🔑 ALREADY HAVE AN ACCOUNT? LOGIN
@@ -169,7 +169,7 @@ export default function LandingPage({ onGetStarted }) {
   ];
 
   return (
-    <div style={{ background: "linear-gradient(180deg, #080808 0%, #050d05 40%, #080808 70%, #080808 100%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", overflowX: "hidden" }}>
+    <div style={{ background: "linear-gradient(180deg, #0a0f05 0%, #080d04 40%, #0a0f05 70%, #0a0f05 100%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", overflowX: "hidden" }}>
       <style>{CSS}</style>
 
       {/* NAV */}
@@ -181,11 +181,11 @@ export default function LandingPage({ onGetStarted }) {
       </nav>
 
       {/* HERO */}
-      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "120px 24px 80px", background: "radial-gradient(ellipse at 50% 20%, #2a000088 0%, #080808 50%), radial-gradient(ellipse at 80% 80%, #00440033 0%, transparent 60%), radial-gradient(ellipse at 20% 100%, #00661133 0%, transparent 50%)" }}>
+      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "120px 24px 80px", background: "radial-gradient(ellipse at 50% 20%, #1a2a0088 0%, #0a0f05 50%), radial-gradient(ellipse at 80% 80%, #2a1a0033 0%, transparent 60%), radial-gradient(ellipse at 20% 100%, #1a2a0044 0%, transparent 50%)" }}>
         <div style={{ fontSize: 72, marginBottom: 16, animation: "pulse 2.5s ease-in-out infinite" }}>🛡️</div>
-        <div style={{ fontSize: 11, letterSpacing: 5, color: "#FF2D2D", fontFamily: "monospace", marginBottom: 16 }}>🇳🇬 NIGERIA'S #1 COMMUNITY SAFETY NETWORK</div>
+        <div style={{ fontSize: 11, letterSpacing: 5, background: "linear-gradient(135deg,#FFB800,#aa7700)", fontFamily: "monospace", marginBottom: 16 }}>🇳🇬 NIGERIA'S #1 COMMUNITY SAFETY NETWORK</div>
         <h1 style={{ fontSize: "clamp(40px, 8vw, 80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: 1, marginBottom: 20, maxWidth: 700 }}>
-          Your Safety,<br /><span style={{ color: "#FF2D2D" }}>One Tap</span> Away
+          Your Safety,<br /><span style={{ color: "#FFB800" }}>One Tap</span> Away
         </h1>
         <p style={{ fontSize: 16, color: "#666", lineHeight: 1.8, maxWidth: 500, marginBottom: 40 }}>
           Real-time security alerts, panic button, anonymous tips and community-powered incident reporting — built for Nigerians, by Nigerians.
@@ -208,7 +208,7 @@ export default function LandingPage({ onGetStarted }) {
       {/* FEATURES */}
       <section style={{ padding: "80px 24px", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <div style={{ fontSize: 10, letterSpacing: 5, color: "#00AA44", fontFamily: "monospace", marginBottom: 12 }}>WHAT WE DO</div>
+          <div style={{ fontSize: 10, letterSpacing: 5, color: "#2ECC71", fontFamily: "monospace", marginBottom: 12 }}>WHAT WE DO</div>
           <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1 }}>Built for Nigerian <span style={{ color: "#FF2D2D" }}>Realities</span></h2>
           <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#008800,#FF2D2D,#008800)", margin: "20px auto 0", borderRadius: 2 }} />
         </div>
