@@ -123,6 +123,9 @@ export default function LandingPage({ onGetStarted }) {
             </div>
             <button onClick={onGetStarted} style={{ width: "100%", background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 16, fontWeight: 900, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", boxShadow: "0 6px 28px #FF2D2D44" }}>
               🛡️ CREATE MY ACCOUNT
+              <button onClick={onGetStarted} style={{ width: "100%", background: "transparent", border: "1px solid #2a2a2a", borderRadius: 12, padding: "16px", color: "#666", fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", marginTop: 10 }}>
+  🔑 ALREADY HAVE AN ACCOUNT? LOGIN
+</button>
             </button>
           </div>
         ) : (
