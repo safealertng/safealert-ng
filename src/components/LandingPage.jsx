@@ -169,11 +169,11 @@ export default function LandingPage({ onGetStarted }) {
   ];
 
   return (
-    <div style={{ background: "#080808", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", overflowX: "hidden" }}>
+    <div style={{ background: "linear-gradient(180deg, #080808 0%, #050d05 40%, #080808 70%, #080808 100%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", overflowX: "hidden" }}>
       <style>{CSS}</style>
 
       {/* NAV */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#08080899", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a1a1a", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#08080899", backdropFilter: "blur(12px)", borderBottom: "1px solid #003300", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1 }}>🛡️ SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
         <button onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 8, padding: "10px 22px", color: "#fff", fontSize: 13, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", boxShadow: "0 4px 16px #FF2D2D44" }}>
           GET STARTED
@@ -181,7 +181,7 @@ export default function LandingPage({ onGetStarted }) {
       </nav>
 
       {/* HERO */}
-      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "120px 24px 80px", background: "radial-gradient(ellipse at 50% 20%, #2a000088 0%, #080808 50%), radial-gradient(ellipse at 80% 80%, #00440022 0%, transparent 60%)" }}>
+      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "120px 24px 80px", background: "radial-gradient(ellipse at 50% 20%, #2a000088 0%, #080808 50%), radial-gradient(ellipse at 80% 80%, #00440033 0%, transparent 60%), radial-gradient(ellipse at 20% 100%, #00661133 0%, transparent 50%)" }}>
         <div style={{ fontSize: 72, marginBottom: 16, animation: "pulse 2.5s ease-in-out infinite" }}>🛡️</div>
         <div style={{ fontSize: 11, letterSpacing: 5, color: "#FF2D2D", fontFamily: "monospace", marginBottom: 16 }}>🇳🇬 NIGERIA'S #1 COMMUNITY SAFETY NETWORK</div>
         <h1 style={{ fontSize: "clamp(40px, 8vw, 80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: 1, marginBottom: 20, maxWidth: 700 }}>
@@ -298,7 +298,7 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ padding: "32px 24px", borderTop: "1px solid #0d1a0d", textAlign: "center" }}>
+      <footer style={{ padding: "32px 24px", borderTop: "1px solid #004400", textAlign: "center" }}>
         <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1, marginBottom: 8 }}>🛡️ SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
         <div style={{ fontSize: 11, color: "#1a2a1a", letterSpacing: 3, fontFamily: "monospace" }}>v1.0 · 🇳🇬 NIGERIA · 2026</div>
       </footer>
