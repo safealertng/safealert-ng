@@ -243,8 +243,8 @@ export default function AdminDashboard({ session, onBack }) {
             <div key={sub.id} style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{sub.user_info?.full_name || "Unknown User"}</div>
-<div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{sub.user_info?.email || sub.user_id}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{sub.user_info?.email || "Unknown User"}</div>
+<div style={{ fontSize: 11, color: "#555", marginTop: 2, fontFamily: "monospace" }}>{sub.user_id?.substring(0, 16)}...</div>
                   <div style={{ fontSize: 10, color: "#555", marginTop: 2 }}>
                     Plan: <span style={{ color: sub.subscription_plans?.name === "Premium" ? "#FF2D2D" : sub.subscription_plans?.name === "Basic" ? "#FFB800" : "#00FF88", fontWeight: 700 }}>{sub.subscription_plans?.name}</span>
                     {" · "}Status: <span style={{ color: sub.status === "active" ? "#00FF88" : "#FF2D2D", fontWeight: 700 }}>{sub.status}</span>
