@@ -187,7 +187,7 @@ export default function LandingPage({ onGetStarted }) {
         <h1 style={{ fontSize: "clamp(40px, 8vw, 80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: 1, marginBottom: 20, maxWidth: 700 }}>
           Your Safety,<br /><span style={{ color: "#FFB800" }}>One Tap</span> Away
         </h1>
-        <p style={{ fontSize: 16, color: "#666", lineHeight: 1.8, maxWidth: 500, marginBottom: 40 }}>
+        <p style={{ fontSize: 16, color: "#aaa", lineHeight: 1.8, maxWidth: 500, marginBottom: 40 }}>
           Real-time security alerts, panic button, anonymous tips and community-powered incident reporting — built for Nigerians, by Nigerians.
         </p>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
@@ -214,10 +214,10 @@ export default function LandingPage({ onGetStarted }) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
           {features.map(f => (
-            <div key={f.title} className="feature-card" style={{ background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 16, padding: 28 }}>
+            <div key={f.title} className="feature-card" style={{ background: "#111a08", border: "1px solid #2a3a10", borderRadius: 16, padding: 28 }}>
               <div style={{ fontSize: 36, marginBottom: 14 }}>{f.icon}</div>
               <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>{f.title}</div>
-              <div style={{ fontSize: 13, color: "#555", lineHeight: 1.8 }}>{f.desc}</div>
+              <div style={{ fontSize: 13, color: "#888", lineHeight: 1.8 }}>{f.desc}</div>
             </div>
           ))}
         </div>
@@ -237,7 +237,7 @@ export default function LandingPage({ onGetStarted }) {
               <div key={s.num} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 48, fontWeight: 900, color: "#00440022", fontFamily: "monospace", marginBottom: 8 }}>{s.num}</div>
                 <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>{s.title}</div>
-                <div style={{ fontSize: 13, color: "#555", lineHeight: 1.8 }}>{s.desc}</div>
+                <div style={{ fontSize: 13, color: "#888", lineHeight: 1.8 }}>{s.desc}</div>
               </div>
             ))}
           </div>
