@@ -112,7 +112,7 @@ export default function LandingPage({ onGetStarted }) {
         <div style={{ fontSize: 10, letterSpacing: 5, color: "#00AA44", fontFamily: "monospace", marginBottom: 12 }}>STAY INFORMED</div>
         <h2 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 1, marginBottom: 12 }}>Get Security <span style={{ color: "#00AA44" }}>Updates</span></h2>
         <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#008800,#00FF88)", margin: "0 auto 24px", borderRadius: 2 }} />
-        <p style={{ fontSize: 13, color: "#555", lineHeight: 1.9, marginBottom: 32, maxWidth: 320 }}>
+        <p style={{ fontSize: 15, color: "#999", lineHeight: 1.9, marginBottom: 32, maxWidth: 320 }}>
           Subscribe to receive safety tips, new feature announcements, and critical security alerts for Nigeria.
         </p>
 
@@ -187,7 +187,7 @@ export default function LandingPage({ onGetStarted }) {
         <h1 style={{ fontSize: "clamp(40px, 8vw, 80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: 1, marginBottom: 20, maxWidth: 700 }}>
           Your Safety,<br /><span style={{ color: "#FFB800" }}>One Tap</span> Away
         </h1>
-        <p style={{ fontSize: 16, color: "#aaa", lineHeight: 1.8, maxWidth: 500, marginBottom: 40 }}>
+        <p style={{ fontSize: 18, color: "#bbb", lineHeight: 1.8, maxWidth: 500, marginBottom: 40 }}>
           Real-time security alerts, panic button, anonymous tips and community-powered incident reporting — built for Nigerians, by Nigerians.
         </p>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
@@ -217,7 +217,7 @@ export default function LandingPage({ onGetStarted }) {
             <div key={f.title} className="feature-card" style={{ background: "#111a08", border: "1px solid #2a3a10", borderRadius: 16, padding: 28 }}>
               <div style={{ fontSize: 36, marginBottom: 14 }}>{f.icon}</div>
               <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>{f.title}</div>
-              <div style={{ fontSize: 13, color: "#888", lineHeight: 1.8 }}>{f.desc}</div>
+              <div style={{ fontSize: 15, color: "#999", lineHeight: 1.8 }}>{f.desc}</div>
             </div>
           ))}
         </div>
@@ -260,7 +260,7 @@ export default function LandingPage({ onGetStarted }) {
               <div style={{ fontSize: 12, color: "#444", marginBottom: 24, fontFamily: "monospace" }}>{p.duration}</div>
               <div style={{ marginBottom: 28 }}>
                 {p.features.map(feat => (
-                  <div key={feat} style={{ fontSize: 13, color: "#666", padding: "7px 0", borderBottom: "1px solid #111", display: "flex", alignItems: "center", gap: 8 }}>
+                  <div key={feat} style={{ fontSize: 15, color: "#999", padding: "7px 0", borderBottom: "1px solid #111", display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ color: p.color, fontSize: 10 }}>✓</span> {feat}
                   </div>
                 ))}
@@ -279,7 +279,7 @@ export default function LandingPage({ onGetStarted }) {
           <div style={{ fontSize: 10, letterSpacing: 5, color: "#00AA44", fontFamily: "monospace", marginBottom: 12 }}>STAY INFORMED</div>
           <h2 style={{ fontSize: "clamp(26px, 5vw, 42px)", fontWeight: 900, letterSpacing: 1, marginBottom: 12 }}>Get Security <span style={{ color: "#00AA44" }}>Updates</span></h2>
           <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#008800,#00FF88)", margin: "0 auto 24px", borderRadius: 2 }} />
-          <p style={{ fontSize: 13, color: "#555", lineHeight: 1.8, marginBottom: 32 }}>Subscribe to receive safety tips, new feature announcements, and critical security alerts for Nigeria.</p>
+          <p style={{ fontSize: 15, color: "#999", lineHeight: 1.8, marginBottom: 32 }}>Subscribe to receive safety tips, new feature announcements, and critical security alerts for Nigeria.</p>
           {newsletterStatus === "success" ? (
             <div style={{ background: "#00AA4411", border: "1px solid #00AA4433", borderRadius: 12, padding: 20, color: "#00FF88", fontSize: 14, fontWeight: 700 }}>
               ✅ You're subscribed! We'll keep you posted.
