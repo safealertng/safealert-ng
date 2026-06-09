@@ -105,7 +105,7 @@ export default function LandingPage({ onGetStarted }) {
   // ─── NEWSLETTER SCREEN ───────────────────────────────────────────
   if (screen === "newsletter") {
     return (
-      <div style={{ background: "radial-gradient(ellipse at 50% 20%, #001a0088 0%, #080808 70%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", maxWidth: 430, margin: "0 auto", textAlign: "center" }}>
+      <div style={{ background: "radial-gradient(ellipse at 50% 20%, #001a0088 0%, #080808 70%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", padding: "80px 24px 60px", maxWidth: 430, margin: "0 auto", textAlign: "center" }}>
         <style>{CSS}</style>
 
         <div style={{ fontSize: 64, marginBottom: 16, animation: "pulse 2.5s ease-in-out infinite" }}>🇳🇬</div>
