@@ -40,6 +40,9 @@ const NEARBY_ALERTS = [
   { id: 4, type: "Suspicious Activity", location: "Barnawa, Kaduna", time: "1 hr ago", active: false },
 ];
 
+// Detects raw "lat, lng" strings (e.g. "9.0765, 7.3986") so they're never shown as a location.
+const COORD_PAIR_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
+
 const STATES = [
   { state: "Abia", zone: "South East", police: { command: "Abia State Police Command", number: "08033418481", commissioner: "CP Danladi Mamman" }, agencies: [{ name: "NSCDC Abia", number: "08036673645", icon: "⚔️" }, { name: "DSS Abia", number: "08033001234", icon: "🛡️" }, { name: "FRSC Abia", number: "08039483333", icon: "🚦" }, { name: "Fire Service Aba", number: "08034567890", icon: "🔥" }, { name: "FMC Umuahia", number: "08037654321", icon: "🏥" }, { name: "NDLEA Abia", number: "08033100001", icon: "💊" }, { name: "NEMA Abia", number: "08033200001", icon: "🆘" }, { name: "Nigerian Red Cross Abia", number: "08033300001", icon: "🏨" }, { name: "NIS Immigration Abia", number: "08033400001", icon: "🛂" }, { name: "Customs Abia", number: "08033500001", icon: "🏛️" }] },
   { state: "Adamawa", zone: "North East", police: { command: "Adamawa State Police Command", number: "08033456789", commissioner: "CP Sikiru Akande" }, agencies: [{ name: "NSCDC Adamawa", number: "08036674567", icon: "⚔️" }, { name: "DSS Adamawa", number: "08033002345", icon: "🛡️" }, { name: "FRSC Adamawa", number: "08039484444", icon: "🚦" }, { name: "SEMA Adamawa", number: "08035678901", icon: "🆘" }, { name: "Specialist Hospital Yola", number: "08037665432", icon: "🏥" }, { name: "NDLEA Adamawa", number: "08033100002", icon: "💊" }, { name: "NEMA Adamawa", number: "08033200002", icon: "🆘" }, { name: "Nigerian Red Cross Adamawa", number: "08033300002", icon: "🏨" }, { name: "NIS Immigration Adamawa", number: "08033400002", icon: "🛂" }, { name: "Customs Adamawa", number: "08033500002", icon: "🏛️" }] },
@@ -388,7 +391,7 @@ export default function MainApp({ session }) {
             description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
             lat: userCoords?.lat || 0,
             lng: userCoords?.lng || 0,
-            state: userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Unknown",
+            state: userLocation && userLocation !== "Locating..." ? userLocation : "Unknown",
             status: "active",
             video_url: urlData.publicUrl,
           });
@@ -1345,7 +1348,7 @@ export default function MainApp({ session }) {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: a.status === "active" ? "#FF2D2D" : "#00FF88", marginTop: 4, flexShrink: 0, boxShadow: `0 0 5px ${a.status === "active" ? "#FF2D2D" : "#00FF88"}` }} />
             <div>
               <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{a.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-              <div style={{ color: "#444", fontSize: 11 }}>📍 {a.state} · {new Date(a.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
+              <div style={{ color: "#444", fontSize: 11 }}>📍 {COORD_PAIR_RE.test(a.state) ? "Unknown location" : a.state} · {new Date(a.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
             </div>
           </div>
         )) : NEARBY_ALERTS.slice(0, 2).map(a => (
@@ -2105,6 +2108,11 @@ function ProfileScreen({ session, onBack, onAdmin, onPlans }) {
 // LIVE ALERTS SCREEN — pulls real incidents from Supabase
 // ─────────────────────────────────────────────────────────────────────────────
 function NewsScreen2() { } // placeholder
+
+// Cache reverse-geocoded "City, State" names by rounded coordinate so repeat
+// lookups (and re-renders) don't hammer the Nominatim API.
+const incidentLocationCache = new Map();
+
 function LiveAlertsScreen({ session }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2113,6 +2121,7 @@ function LiveAlertsScreen({ session }) {
   const [filterState, setFilterState] = useState("all");
   const [newAlert, setNewAlert] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
+  const [locationNames, setLocationNames] = useState({});
 
 
 
@@ -2123,6 +2132,41 @@ function LiveAlertsScreen({ session }) {
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(p => setUserCoords({ lat: p.coords.latitude, lng: p.coords.longitude }));
   }, []);
+
+  // Resolve incident GPS coordinates into readable "City, State" names.
+  const unmountedRef = useRef(false);
+  const resolvedIdsRef = useRef(new Set());
+  useEffect(() => () => { unmountedRef.current = true; }, []);
+  useEffect(() => {
+    const pending = incidents.filter(inc => inc.lat && inc.lng && inc.lat !== 0 && !resolvedIdsRef.current.has(inc.id));
+    if (pending.length === 0) return;
+    pending.forEach(inc => resolvedIdsRef.current.add(inc.id));
+    (async () => {
+      for (const inc of pending) {
+        const key = `${inc.lat.toFixed(2)},${inc.lng.toFixed(2)}`;
+        let name = incidentLocationCache.get(key);
+        if (name === undefined) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${inc.lat}&lon=${inc.lng}&format=json&accept-language=en`,
+              { headers: { "User-Agent": "SafeAlertNG/1.0" } }
+            );
+            const data = await res.json();
+            const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
+            const state = data.address?.state || "";
+            name = city && state ? `${city}, ${state}` : (state || null);
+          } catch {
+            name = null;
+          }
+          incidentLocationCache.set(key, name);
+          await new Promise(r => setTimeout(r, 1000)); // respect Nominatim rate limit
+        }
+        if (unmountedRef.current) return;
+        const fallback = inc.state && !COORD_PAIR_RE.test(inc.state) ? inc.state : "Unknown location";
+        setLocationNames(prev => ({ ...prev, [inc.id]: name || fallback }));
+      }
+    })();
+  }, [incidents]);
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -2238,7 +2282,7 @@ function LiveAlertsScreen({ session }) {
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: col + "18", border: `1px solid ${col}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: 13, color: "#ddd" }}>{TYPE_LABELS[inc.type] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-                        <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>📍 {inc.lat && inc.lng && inc.lat !== 0 ? `${inc.lat.toFixed(4)}, ${inc.lng.toFixed(4)}` : inc.state}</div>
+                        <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>📍 {inc.lat && inc.lng && inc.lat !== 0 ? (locationNames[inc.id] || "Locating…") : (inc.state && !COORD_PAIR_RE.test(inc.state) ? inc.state : "Unknown location")}</div>
                       </div>
                     </div>
                     <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: "3px 8px", borderRadius: 4, background: isActive ? "#FF2D2D18" : "#00FF8818", color: isActive ? "#FF2D2D" : "#00FF88", border: `1px solid ${isActive ? "#FF2D2D44" : "#00FF8844"}`, flexShrink: 0 }}>{inc.status?.toUpperCase()}</span>
