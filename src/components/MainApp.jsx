@@ -43,6 +43,10 @@ const NEARBY_ALERTS = [
 // Detects raw "lat, lng" strings (e.g. "9.0765, 7.3986") so they're never shown as a location.
 const COORD_PAIR_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 
+// GPS fixes with worse accuracy than this (meters) are likely network/IP-based
+// and can be off by tens or hundreds of km — warn before submitting a report.
+const LOW_ACCURACY_THRESHOLD_M = 5000;
+
 const STATES = [
   { state: "Abia", zone: "South East", police: { command: "Abia State Police Command", number: "08033418481", commissioner: "CP Danladi Mamman" }, agencies: [{ name: "NSCDC Abia", number: "08036673645", icon: "⚔️" }, { name: "DSS Abia", number: "08033001234", icon: "🛡️" }, { name: "FRSC Abia", number: "08039483333", icon: "🚦" }, { name: "Fire Service Aba", number: "08034567890", icon: "🔥" }, { name: "FMC Umuahia", number: "08037654321", icon: "🏥" }, { name: "NDLEA Abia", number: "08033100001", icon: "💊" }, { name: "NEMA Abia", number: "08033200001", icon: "🆘" }, { name: "Nigerian Red Cross Abia", number: "08033300001", icon: "🏨" }, { name: "NIS Immigration Abia", number: "08033400001", icon: "🛂" }, { name: "Customs Abia", number: "08033500001", icon: "🏛️" }] },
   { state: "Adamawa", zone: "North East", police: { command: "Adamawa State Police Command", number: "08033456789", commissioner: "CP Sikiru Akande" }, agencies: [{ name: "NSCDC Adamawa", number: "08036674567", icon: "⚔️" }, { name: "DSS Adamawa", number: "08033002345", icon: "🛡️" }, { name: "FRSC Adamawa", number: "08039484444", icon: "🚦" }, { name: "SEMA Adamawa", number: "08035678901", icon: "🆘" }, { name: "Specialist Hospital Yola", number: "08037665432", icon: "🏥" }, { name: "NDLEA Adamawa", number: "08033100002", icon: "💊" }, { name: "NEMA Adamawa", number: "08033200002", icon: "🆘" }, { name: "Nigerian Red Cross Adamawa", number: "08033300002", icon: "🏨" }, { name: "NIS Immigration Adamawa", number: "08033400002", icon: "🛂" }, { name: "Customs Adamawa", number: "08033500002", icon: "🏛️" }] },
@@ -103,15 +107,17 @@ export default function MainApp({ session }) {
   const userLocationRef = useRef("Locating...");
   const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
+  const userAccuracyRef = useRef(null);
   const mimeTypeRef = useRef("video/webm");
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          const { latitude, longitude } = position.coords;
+          const { latitude, longitude, accuracy } = position.coords;
           setUserCoords({ lat: latitude, lng: longitude });
           userCoordsRef.current = { lat: latitude, lng: longitude };
+          userAccuracyRef.current = accuracy;
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
@@ -125,7 +131,7 @@ export default function MainApp({ session }) {
             setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
           }
         },
-        () => (err) => {
+        (err) => {
           console.error("GPS error:", err);
           setUserLocation("Location unavailable");
         },
@@ -516,9 +522,10 @@ export default function MainApp({ session }) {
         await new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
             async (pos) => {
-              const { latitude, longitude } = pos.coords;
+              const { latitude, longitude, accuracy } = pos.coords;
               setUserCoords({ lat: latitude, lng: longitude });
               userCoordsRef.current = { lat: latitude, lng: longitude };
+              userAccuracyRef.current = accuracy;
               try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
                 const data = await res.json();
@@ -837,6 +844,10 @@ export default function MainApp({ session }) {
         </div>
       </div>
       <button onClick={async () => {
+        if (userAccuracyRef.current && userAccuracyRef.current > LOW_ACCURACY_THRESHOLD_M) {
+          const km = (userAccuracyRef.current / 1000).toFixed(1);
+          if (!window.confirm(`Your device's location accuracy is low (~${km} km), so this report's location may be off. Submit anyway?`)) return;
+        }
         setReportStage("live");
         startBroadcast();
         try {
