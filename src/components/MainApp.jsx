@@ -105,6 +105,7 @@ export default function MainApp({ session }) {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [userLocation, setUserLocation] = useState("Locating...");
   const userLocationRef = useRef("Locating...");
+  useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
   const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
   const userAccuracyRef = useRef(null);
@@ -591,8 +592,19 @@ export default function MainApp({ session }) {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           userCoordsRef.current = { lat, lng };
+          userAccuracyRef.current = pos.coords.accuracy;
+          let locationName = userLocationRef.current;
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
+            const data = await res.json();
+            const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
+            const state = data.address?.state || "";
+            if (city && state) locationName = `${city}, ${state}`;
+          } catch (err) { console.error("Reverse geocode error:", err); }
+          setUserLocation(locationName);
+          userLocationRef.current = locationName;
           await supabase.from("panic_events")
-            .update({ lat, lng })
+            .update({ lat, lng, state: locationName })
             .eq("user_id", session?.user?.id)
             .eq("resolved", false);
         }, null, { enableHighAccuracy: true, maximumAge: 0 });
