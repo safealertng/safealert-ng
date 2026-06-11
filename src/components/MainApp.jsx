@@ -120,6 +120,7 @@ export default function MainApp({ session }) {
   const [checkInMsg, setCheckInMsg] = useState(null);
   const [hasOwnPushSubscription, setHasOwnPushSubscription] = useState(true);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
+  const [pushSetupMsg, setPushSetupMsg] = useState(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -604,14 +605,22 @@ export default function MainApp({ session }) {
 
   const enableFamilyNotifications = async () => {
     setEnablingNotifications(true);
+    setPushSetupMsg(null);
     // Request permission directly inside this tap handler first — on iOS
     // Safari, requestPermission() must run with a live user-gesture context,
     // which is lost if any awaits (e.g. service worker registration) happen first.
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       await Notification.requestPermission();
     }
-    await setupPushNotifications();
+    const result = await setupPushNotifications();
     await checkOwnPushSubscription();
+    if (result === "unsupported") {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+      if (isIOS && !isStandalone) {
+        setPushSetupMsg("To receive alerts on iPhone, add SafeAlertNG to your Home Screen first: tap the Share button then Add to Home Screen, then open the app from your home screen and enable alerts");
+      }
+    }
     setEnablingNotifications(false);
   };
 
@@ -1012,9 +1021,16 @@ export default function MainApp({ session }) {
     <Shell shakeFlash={false}>
       <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
       {!hasOwnPushSubscription && (
-        <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ display: "block", width: "calc(100% - 32px)", margin: "12px 16px 0", background: "linear-gradient(135deg,#FF6B00,#CC5500)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: 0.5, opacity: enablingNotifications ? 0.7 : 1 }}>
-          {enablingNotifications ? "Enabling…" : "🔔 Tap here to enable family alerts"}
-        </button>
+        <>
+          <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ display: "block", width: "calc(100% - 32px)", margin: "12px 16px 0", background: "linear-gradient(135deg,#FF6B00,#CC5500)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: 0.5, opacity: enablingNotifications ? 0.7 : 1 }}>
+            {enablingNotifications ? "Enabling…" : "🔔 Tap here to enable family alerts"}
+          </button>
+          {pushSetupMsg && (
+            <div style={{ margin: "8px 16px 0", padding: "10px 12px", borderRadius: 8, background: "#00BFFF18", border: "1px solid #00BFFF44", color: "#00BFFF", fontSize: 12, fontWeight: 700, lineHeight: 1.5 }}>
+              {pushSetupMsg}
+            </div>
+          )}
+        </>
       )}
       {addingMember && (
         <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 12, padding: 14 }}>
