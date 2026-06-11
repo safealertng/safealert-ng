@@ -43,54 +43,6 @@ const NEARBY_ALERTS = [
 // Detects raw "lat, lng" strings (e.g. "9.0765, 7.3986") so they're never shown as a location.
 const COORD_PAIR_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 
-// GPS fixes with worse accuracy than this (meters) are likely network/IP-based
-// and can be off by tens or hundreds of km — warn before submitting a report.
-const LOW_ACCURACY_THRESHOLD_M = 5000;
-
-// Resolves "City, State" for a coordinate pair via Nominatim, or null if unavailable.
-async function reverseGeocode(lat, lng) {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`,
-      { headers: { "User-Agent": "SafeAlertNG/1.0" } }
-    );
-    const data = await res.json();
-    const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
-    const state = data.address?.state || data.address?.region || "";
-    return city && state ? `${city}, ${state}` : null;
-  } catch {
-    return null;
-  }
-}
-
-// Tries a high-accuracy GPS fix first; on error or timeout, falls back to a
-// faster network/IP-based fix rather than giving up entirely. Returns
-// { pos, permissionDenied } — pos is null if no fix could be obtained.
-function getLocationWithFallback() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve({ pos: null, permissionDenied: false }); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ pos, permissionDenied: false }),
-      (err) => {
-        console.error("GPS error (high accuracy):", err);
-        if (err.code === err.PERMISSION_DENIED) {
-          resolve({ pos: null, permissionDenied: true });
-          return;
-        }
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ pos, permissionDenied: false }),
-          (err2) => {
-            console.error("GPS error (fallback):", err2);
-            resolve({ pos: null, permissionDenied: err2.code === err2.PERMISSION_DENIED });
-          },
-          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  });
-}
-
 const STATES = [
   { state: "Abia", zone: "South East", police: { command: "Abia State Police Command", number: "08033418481", commissioner: "CP Danladi Mamman" }, agencies: [{ name: "NSCDC Abia", number: "08036673645", icon: "⚔️" }, { name: "DSS Abia", number: "08033001234", icon: "🛡️" }, { name: "FRSC Abia", number: "08039483333", icon: "🚦" }, { name: "Fire Service Aba", number: "08034567890", icon: "🔥" }, { name: "FMC Umuahia", number: "08037654321", icon: "🏥" }, { name: "NDLEA Abia", number: "08033100001", icon: "💊" }, { name: "NEMA Abia", number: "08033200001", icon: "🆘" }, { name: "Nigerian Red Cross Abia", number: "08033300001", icon: "🏨" }, { name: "NIS Immigration Abia", number: "08033400001", icon: "🛂" }, { name: "Customs Abia", number: "08033500001", icon: "🏛️" }] },
   { state: "Adamawa", zone: "North East", police: { command: "Adamawa State Police Command", number: "08033456789", commissioner: "CP Sikiru Akande" }, agencies: [{ name: "NSCDC Adamawa", number: "08036674567", icon: "⚔️" }, { name: "DSS Adamawa", number: "08033002345", icon: "🛡️" }, { name: "FRSC Adamawa", number: "08039484444", icon: "🚦" }, { name: "SEMA Adamawa", number: "08035678901", icon: "🆘" }, { name: "Specialist Hospital Yola", number: "08037665432", icon: "🏥" }, { name: "NDLEA Adamawa", number: "08033100002", icon: "💊" }, { name: "NEMA Adamawa", number: "08033200002", icon: "🆘" }, { name: "Nigerian Red Cross Adamawa", number: "08033300002", icon: "🏨" }, { name: "NIS Immigration Adamawa", number: "08033400002", icon: "🛂" }, { name: "Customs Adamawa", number: "08033500002", icon: "🏛️" }] },
@@ -149,40 +101,37 @@ export default function MainApp({ session }) {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [userLocation, setUserLocation] = useState("Locating...");
   const userLocationRef = useRef("Locating...");
-  useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
   const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
-  const userAccuracyRef = useRef(null);
-  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
   const mimeTypeRef = useRef("video/webm");
 
   useEffect(() => {
-    const profileLocation = session?.user?.user_metadata?.state || null;
-    if (!navigator.geolocation) {
-      setUserLocation(profileLocation || "Location unavailable");
-      return;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserCoords({ lat: latitude, lng: longitude });
+          userCoordsRef.current = { lat: latitude, lng: longitude };
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
+              { headers: { "User-Agent": "SafeAlertNG/1.0" } }
+            );
+            const data = await res.json();
+            const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
+            const state = data.address.state || data.address.region || "";
+            setUserLocation(city && state ? `${city}, ${state}` : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
+          } catch {
+            setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          }
+        },
+        () => (err) => {
+          console.error("GPS error:", err);
+          setUserLocation("Location unavailable");
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
     }
-    let cancelled = false;
-    (async () => {
-      const { pos, permissionDenied } = await getLocationWithFallback();
-      if (cancelled) return;
-      if (permissionDenied) setLocationPermissionDenied(true);
-      if (!pos) {
-        const fallback = profileLocation || "Location unavailable";
-        setUserLocation(fallback);
-        userLocationRef.current = fallback;
-        return;
-      }
-      const { latitude, longitude, accuracy } = pos.coords;
-      setUserCoords({ lat: latitude, lng: longitude });
-      userCoordsRef.current = { lat: latitude, lng: longitude };
-      userAccuracyRef.current = accuracy;
-      const name = (await reverseGeocode(latitude, longitude)) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-      if (cancelled) return;
-      setUserLocation(name);
-      userLocationRef.current = name;
-    })();
-    return () => { cancelled = true; };
   }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
   // GPS tracking — auto-link by phone + update location every 5 minutes
   useEffect(() => {
@@ -563,26 +512,34 @@ export default function MainApp({ session }) {
 
   const startBroadcast = async () => {
     try {
-      const profileLocation = session?.user?.user_metadata?.state || null;
-      if (navigator.geolocation && (!userCoords || userLocation === "Locating..." || userLocation === "Location unavailable")) {
-        const { pos, permissionDenied } = await getLocationWithFallback();
-        if (permissionDenied) setLocationPermissionDenied(true);
-        if (pos) {
-          const { latitude, longitude, accuracy } = pos.coords;
-          setUserCoords({ lat: latitude, lng: longitude });
-          userCoordsRef.current = { lat: latitude, lng: longitude };
-          userAccuracyRef.current = accuracy;
-          const loc = (await reverseGeocode(latitude, longitude)) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-          setUserLocation(loc);
-          userLocationRef.current = loc;
-        } else if (profileLocation) {
-          setUserLocation(profileLocation);
-          userLocationRef.current = profileLocation;
-        }
+      if (navigator.geolocation && (!userCoords || userLocation === "Locating...")) {
+        await new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              const { latitude, longitude } = pos.coords;
+              setUserCoords({ lat: latitude, lng: longitude });
+              userCoordsRef.current = { lat: latitude, lng: longitude };
+              try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
+                const data = await res.json();
+                const city = data.address?.city || data.address?.town || data.address?.village || "";
+                const state = data.address?.state || "";
+                const loc = city && state ? `${city}, ${state}` : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                setUserLocation(loc);
+                userLocationRef.current = loc;
+              } catch (err) {
+                const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                setUserLocation(fallback);
+                userLocationRef.current = fallback;
+              }
+              resolve(null);
+            },
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+        });
       }
-      const currentLocation = userCoordsRef.current
-        ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}`
-        : (profileLocation || "Unknown");
+      const currentLocation = userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Unknown";
       await supabase.from("panic_events").insert({
         user_id: session?.user?.id,
         lat: userCoords?.lat || 0,
@@ -622,20 +579,17 @@ export default function MainApp({ session }) {
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     locationIntervalRef.current = setInterval(async () => {
-      const { pos, permissionDenied } = await getLocationWithFallback();
-      if (permissionDenied) setLocationPermissionDenied(true);
-      if (!pos) return;
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      userCoordsRef.current = { lat, lng };
-      userAccuracyRef.current = pos.coords.accuracy;
-      const locationName = (await reverseGeocode(lat, lng)) || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-      setUserLocation(locationName);
-      userLocationRef.current = locationName;
-      await supabase.from("panic_events")
-        .update({ lat, lng, state: locationName })
-        .eq("user_id", session?.user?.id)
-        .eq("resolved", false);
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          userCoordsRef.current = { lat, lng };
+          await supabase.from("panic_events")
+            .update({ lat, lng })
+            .eq("user_id", session?.user?.id)
+            .eq("resolved", false);
+        }, null, { enableHighAccuracy: true, maximumAge: 0 });
+      }
     }, 10000);
     let p = 0;
     upRef.current = setInterval(() => {
@@ -749,9 +703,6 @@ export default function MainApp({ session }) {
           <div style={S.countLabel}>SENDING EMERGENCY ALERT</div>
           <div style={S.countSub}>Police · Family · Emergency contacts</div>
           <div style={S.countLoc}>📍 {userLocation}</div>
-          {locationPermissionDenied && (
-            <div style={S.locWarn}>⚠️ Location access is off. Enable location permission for this site in your browser settings for accurate GPS.</div>
-          )}
           <button style={S.cancelBig} onClick={cancelPanic}>✕  CANCEL</button>
         </div>
       </div>
@@ -839,9 +790,6 @@ export default function MainApp({ session }) {
       <div style={{ padding: "12px 16px 0" }}>
         <MicroLabel>YOUR LOCATION</MicroLabel>
         <div style={S.locBox}>📍 <span style={{ flex: 1, color: "#ccc", fontSize: 13 }}>{userLocation}</span><span style={{ color: "#00FF88", fontSize: 10, fontWeight: 700 }}>LIVE</span></div>
-        {locationPermissionDenied && (
-          <div style={S.locWarn}>⚠️ Location access is off. Enable location permission for this site in your browser settings for accurate GPS.</div>
-        )}
       </div>
       <div style={{ padding: "12px 16px 0" }}>
         <MicroLabel>DESCRIPTION (OPTIONAL)</MicroLabel>
@@ -889,10 +837,6 @@ export default function MainApp({ session }) {
         </div>
       </div>
       <button onClick={async () => {
-        if (userAccuracyRef.current && userAccuracyRef.current > LOW_ACCURACY_THRESHOLD_M) {
-          const km = (userAccuracyRef.current / 1000).toFixed(1);
-          if (!window.confirm(`Your device's location accuracy is low (~${km} km), so this report's location may be off. Submit anyway?`)) return;
-        }
         setReportStage("live");
         startBroadcast();
         try {
@@ -3076,7 +3020,6 @@ const S = {
   countLabel: { fontWeight: 900, fontSize: 16, letterSpacing: 3, color: "#fff", marginTop: 6 },
   countSub: { color: "#555", fontSize: 12, marginTop: 4 },
   countLoc: { color: "#FFB800", fontSize: 11, marginTop: 8, fontFamily: "monospace" },
-  locWarn: { background: "#FFB80010", border: "1px solid #FFB80033", borderRadius: 8, padding: "8px 10px", marginTop: 8, fontSize: 11, color: "#FFB800", lineHeight: 1.5, fontFamily: "'Barlow Condensed',sans-serif" },
   cancelBig: { marginTop: 28, background: "transparent", border: "1px solid #2a2a2a", color: "#666", borderRadius: 8, padding: "10px 30px", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 2 },
   shakeBanner: { position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", background: "#111", border: "1px solid #222", borderRadius: 20, padding: "7px 16px", fontSize: 11, color: "#aaa", zIndex: 50, whiteSpace: "nowrap", animation: "slideDown 0.3s ease" },
   stateCard: { width: "100%", background: "#0c0c0c", border: "1px solid #161616", borderRadius: 12, padding: "13px 14px", marginBottom: 7, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" },
