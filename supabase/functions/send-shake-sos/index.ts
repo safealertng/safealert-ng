@@ -58,7 +58,22 @@ serve(async (req) => {
       subscriptions.map(({ subscription }) => webpush.sendNotification(subscription, payload))
     );
 
-    const sent = results.filter((r) => r.status === "fulfilled").length;
+    let sent = 0;
+    const staleEndpoints: string[] = [];
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled") {
+        sent++;
+      } else if (r.reason?.statusCode === 404 || r.reason?.statusCode === 410) {
+        // Browser unsubscribed or the subscription expired — drop it so
+        // future alerts don't keep silently failing for this contact.
+        staleEndpoints.push(subscriptions[i].subscription.endpoint);
+      }
+    });
+
+    if (staleEndpoints.length > 0) {
+      await supabase.from("push_subscriptions").delete().in("subscription->>endpoint", staleEndpoints);
+    }
+
     return new Response(JSON.stringify({ sent }), { status: 200 });
 
   } catch (error) {
