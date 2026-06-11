@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../lib/supabase";
 import AgoraRTC, { APP_ID } from "../lib/agora";
 import AdminDashboard from "./AdminDashboard";
+import useShakeToSOS from "../hooks/useShakeToSOS";
 import emailjs from "@emailjs/browser";
 emailjs.init("EJAw6dlAaCLeS4iHq");
 
@@ -104,6 +105,7 @@ export default function MainApp({ session }) {
   const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
   const mimeTypeRef = useRef("video/webm");
+  const shakeSOS = useShakeToSOS(session);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -920,6 +922,20 @@ export default function MainApp({ session }) {
                 </div>
               ))}
             </div>
+          </div>
+          <div style={{ ...S.card, marginTop: 8 }}>
+            <MicroLabel>SHAKE-TO-SOS SETUP</MicroLabel>
+            <div style={{ color: "#555", fontSize: 12, marginTop: 4 }}>
+              {shakeSOS.active
+                ? "🔴 Silent SOS is active for this device — shake 3× again to cancel."
+                : "Enable motion access once so this device can detect your 3x shake gesture."}
+            </div>
+            <button
+              onClick={async () => { await shakeSOS.requestPermission(); }}
+              style={{ marginTop: 10, width: "100%", background: "#111", border: "1px solid #222", borderRadius: 8, padding: "10px", color: "#00FF88", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}
+            >
+              Enable Shake-to-SOS
+            </button>
           </div>
         </div>
       )}

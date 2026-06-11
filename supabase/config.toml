@@ -20,3 +20,14 @@ entrypoint = "./functions/fetch-news/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/fetch-news/*.html" ]
+
+[functions.send-shake-sos]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-shake-sos/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/send-shake-sos/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/send-shake-sos/*.html" ]
