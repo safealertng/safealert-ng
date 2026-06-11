@@ -43,9 +43,12 @@ serve(async (req) => {
       ? `${name} accepted your family request — you're now connected on Family Tracker.`
       : action === "checkin"
       ? `${name} is checking on you — please respond.`
+      : action === "distress"
+      ? `${name} is in DISTRESS and needs immediate help! Check their live location immediately.`
       : `${name} wants to add you as family on SafeAlertNG.`;
+    const title = action === "distress" ? "🚨 DISTRESS ALERT — SafeAlertNG" : "SafeAlert NG";
     const payload = JSON.stringify({
-      title: "SafeAlert NG",
+      title,
       body,
       fromUserId: fromUserId || null,
     });

@@ -92,10 +92,17 @@ const ZONE_COLORS = { "North West": "#4A90D9", "North East": "#E67E22", "North C
 // lookups (and re-renders) don't hammer the Nominatim API.
 const familyLocationCache = new Map();
 
+// One-tap emergency numbers shown on a received DISTRESS alert.
+const FAMILY_ALERT_EMERGENCY_NUMBERS = [
+  { label: "Police", number: "199" },
+  { label: "DSS", number: "08039003044" },
+  { label: "Army", number: "193" },
+];
+
 // Lightweight cross-screen store so a pending family alert (e.g. a check-in
 // request that couldn't be pushed) shows as a banner on whatever screen the
 // recipient currently has open, not just the Family Tracker.
-let familyAlertStore = { alerts: [], onOpen: () => {}, onDismiss: () => {} };
+let familyAlertStore = { alerts: [], onOpen: () => {}, onDismiss: () => {}, dismissingId: null };
 const familyAlertSubscribers = new Set();
 function publishFamilyAlertStore(next) {
   familyAlertStore = next;
@@ -143,6 +150,8 @@ export default function MainApp({ session }) {
   const [familyPushStatus, setFamilyPushStatus] = useState(new Set());
   const [sendingCheckInTo, setSendingCheckInTo] = useState(null);
   const [checkInMsg, setCheckInMsg] = useState(null);
+  const [sendingDistressTo, setSendingDistressTo] = useState(null);
+  const [distressMsg, setDistressMsg] = useState(null);
   const [hasOwnPushSubscription, setHasOwnPushSubscription] = useState(true);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
   const iosPushUnsupported = useMemo(() => {
@@ -434,6 +443,7 @@ export default function MainApp({ session }) {
     if (!member.member_user_id) return;
     setSendingCheckInTo(member.id);
     setCheckInMsg(null);
+    setDistressMsg(null);
 
     // Save the alert first so the recipient sees it next time they open the
     // app even if they have no push subscription — push below is best-effort.
@@ -473,6 +483,56 @@ export default function MainApp({ session }) {
       setCheckInMsg({ type: "ok", text: `Alert saved — ${member.nickname} will see it next time they open the app.` });
     }
     setSendingCheckInTo(null);
+  };
+
+  const sendDistressAlert = async (member) => {
+    if (!member.member_user_id) return;
+    setSendingDistressTo(member.id);
+    setDistressMsg(null);
+    setCheckInMsg(null);
+
+    const coords = userCoordsRef.current;
+
+    // Log the distress event first so the recipient sees it (with live
+    // location) the moment they open the app — push below is best-effort.
+    const { error: insertError } = await supabase.from("family_alerts").insert({
+      from_user_id: session?.user?.id,
+      to_user_id: member.member_user_id,
+      type: "distress",
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
+    });
+    if (insertError) {
+      setDistressMsg({ type: "error", text: "Failed to send distress alert. Try again." });
+      setSendingDistressTo(null);
+      return;
+    }
+
+    try {
+      const res = await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+          "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+        },
+        body: JSON.stringify({
+          toUserId: member.member_user_id,
+          fromUserId: session?.user?.id,
+          fromName: session?.user?.user_metadata?.full_name || "A family member",
+          action: "distress",
+        }),
+      });
+      const data = await res.json();
+      if (data?.sent > 0) {
+        setDistressMsg({ type: "ok", text: `Distress alert sent to ${member.nickname}.` });
+      } else {
+        setDistressMsg({ type: "ok", text: `Distress alert saved — ${member.nickname} will see it immediately if they have the app open.` });
+      }
+    } catch (e) {
+      setDistressMsg({ type: "ok", text: `Distress alert saved — ${member.nickname} will see it immediately if they have the app open.` });
+    }
+    setSendingDistressTo(null);
   };
 
   const startVoiceRecording = async () => {
@@ -744,8 +804,9 @@ export default function MainApp({ session }) {
       alerts: nav === "family" ? [] : pendingFamilyAlerts,
       onOpen: (alert) => setPendingFamilyDeepLink(alert.from_user_id),
       onDismiss: dismissFamilyAlert,
+      dismissingId: dismissingAlertId,
     });
-  }, [pendingFamilyAlerts, nav]);
+  }, [pendingFamilyAlerts, nav, dismissingAlertId]);
 
   const enableFamilyNotifications = async () => {
     setEnablingNotifications(true);
@@ -1253,10 +1314,15 @@ export default function MainApp({ session }) {
           ))}
         </div>
       )}
-      {pendingFamilyAlerts.length > 0 && (
+      {pendingFamilyAlerts.filter(a => a.type === "distress").map(a => (
+        <div key={a.id} style={{ margin: "12px 16px 0" }}>
+          <DistressAlertCard alert={a} onOpen={() => setPendingFamilyDeepLink(a.from_user_id)} onDismiss={dismissFamilyAlert} dismissing={dismissingAlertId === a.id} />
+        </div>
+      ))}
+      {pendingFamilyAlerts.filter(a => a.type !== "distress").length > 0 && (
         <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #00BFFF44", borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#00BFFF", marginBottom: 10, fontFamily: "monospace" }}>FAMILY ALERTS</div>
-          {pendingFamilyAlerts.map(a => (
+          {pendingFamilyAlerts.filter(a => a.type !== "distress").map(a => (
             <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #161616" }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
                 {a.type === "panic" ? "🚨" : "🔔"}
@@ -1313,14 +1379,22 @@ export default function MainApp({ session }) {
               </>
             )}
             {selectedMember.member_user_id && (
-              <button onClick={() => sendCheckInAlert(selectedMember)} disabled={sendingCheckInTo === selectedMember.id} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#00BFFF22", boxShadow: "none", color: "#00BFFF", border: "1px solid #00BFFF44", opacity: sendingCheckInTo === selectedMember.id ? 0.6 : 1 }}>
-                {sendingCheckInTo === selectedMember.id ? "Sending…" : "📨 Send Alert"}
-              </button>
+              <>
+                <button onClick={() => sendDistressAlert(selectedMember)} disabled={sendingDistressTo === selectedMember.id} style={{ ...S.redBtn, flex: 1, fontSize: 12, opacity: sendingDistressTo === selectedMember.id ? 0.6 : 1 }}>
+                  {sendingDistressTo === selectedMember.id ? "Sending…" : "🚨 DISTRESS ALERT"}
+                </button>
+                <button onClick={() => sendCheckInAlert(selectedMember)} disabled={sendingCheckInTo === selectedMember.id} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#00FF8822", boxShadow: "none", color: "#00FF88", border: "1px solid #00FF8844", opacity: sendingCheckInTo === selectedMember.id ? 0.6 : 1 }}>
+                  {sendingCheckInTo === selectedMember.id ? "Sending…" : "✅ CHECK IN"}
+                </button>
+              </>
             )}
             <button onClick={() => { deleteFamilyMember(selectedMember.id); setSelectedMember(null); }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#1a1a1a", boxShadow: "none", color: "#FF2D2D", border: "1px solid #FF2D2D33" }}>🗑️ Remove</button>
           </div>
           {checkInMsg && (
             <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, textAlign: "center", color: checkInMsg.type === "error" ? "#FF2D2D" : "#00FF88" }}>{checkInMsg.text}</div>
+          )}
+          {distressMsg && (
+            <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, textAlign: "center", color: distressMsg.type === "error" ? "#FF2D2D" : "#00FF88" }}>{distressMsg.text}</div>
           )}
         </div>
       ) : (
@@ -1830,12 +1904,19 @@ export default function MainApp({ session }) {
 // SHARED COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 function Shell({ children, shakeFlash }) {
-  const { alerts, onOpen, onDismiss } = useFamilyAlertStore();
+  const { alerts, onOpen, onDismiss, dismissingId } = useFamilyAlertStore();
+  const distressAlerts = alerts.filter(a => a.type === "distress");
+  const otherAlerts = alerts.filter(a => a.type !== "distress");
   return (
     <div style={S.shell}>
       <style>{CSS}</style>
       {shakeFlash && <div style={S.shakeBanner}>📳 Shake phone 3× for silent SOS</div>}
-      {alerts.map((a, i) => (
+      {distressAlerts.map(a => (
+        <div key={a.id} style={S.distressToastWrap}>
+          <DistressAlertCard alert={a} onOpen={onOpen} onDismiss={onDismiss} dismissing={dismissingId === a.id} />
+        </div>
+      ))}
+      {otherAlerts.map((a, i) => (
         <div key={a.id} style={{ ...S.familyAlertToast, top: 14 + i * 56 }}>
           <button onClick={() => onOpen(a)} style={S.familyAlertToastBody}>
             <span style={{ fontSize: 18 }}>{a.type === "panic" ? "🚨" : "🔔"}</span>
@@ -1850,6 +1931,29 @@ function Shell({ children, shakeFlash }) {
         </div>
       ))}
       {children}
+    </div>
+  );
+}
+
+// Red emergency card shown for a received DISTRESS alert — live location +
+// one-tap calls to Police/DSS/Army, used both as a global toast and inline
+// on the Family Tracker screen.
+function DistressAlertCard({ alert: a, onOpen, onDismiss, dismissing }) {
+  return (
+    <div style={S.distressCard}>
+      <div style={S.distressHeader}>🚨 {a.from_name || "A family member"} NEEDS HELP</div>
+      <div style={S.distressBody}>
+        {a.from_name || "Your family member"} is in DISTRESS and needs immediate help! Check their live location immediately.
+      </div>
+      <button onClick={() => onOpen(a)} style={S.distressLocBtn}>📍 View Live Location</button>
+      <div style={S.distressCallRow}>
+        {FAMILY_ALERT_EMERGENCY_NUMBERS.map(n => (
+          <a key={n.number} href={`tel:${n.number}`} style={S.distressCallBtn}>📞 {n.label}<br />{n.number}</a>
+        ))}
+      </div>
+      <button onClick={() => onDismiss(a.id)} disabled={dismissing} style={S.distressDismiss}>
+        {dismissing ? "…" : "Dismiss"}
+      </button>
     </div>
   );
 }
@@ -3501,6 +3605,14 @@ const S = {
   familyAlertToast: { position: "fixed", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 406, background: "#0d0d0d", border: "1px solid #00BFFF44", borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, zIndex: 60, boxShadow: "0 4px 18px rgba(0,0,0,0.5)", animation: "slideDown 0.3s ease" },
   familyAlertToastBody: { flex: 1, display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ccc", fontSize: 12, fontFamily: "'Barlow Condensed',sans-serif", cursor: "pointer", textAlign: "left", padding: 0 },
   familyAlertToastDismiss: { flexShrink: 0, background: "#00FF8822", border: "1px solid #00FF8844", borderRadius: 6, padding: "6px 10px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" },
+  distressToastWrap: { position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 406, zIndex: 70, animation: "slideDown 0.3s ease" },
+  distressCard: { background: "linear-gradient(160deg,#2a0000,#0d0d0d)", border: "1px solid #FF2D2D88", borderRadius: 12, padding: 14, boxShadow: "0 4px 24px #FF2D2D33" },
+  distressHeader: { fontWeight: 900, fontSize: 14, letterSpacing: 1, color: "#FF2D2D", marginBottom: 6, textShadow: "0 0 12px #FF2D2D88" },
+  distressBody: { fontSize: 12, color: "#ddd", lineHeight: 1.4, marginBottom: 10 },
+  distressLocBtn: { width: "100%", background: "#FF2D2D22", border: "1px solid #FF2D2D55", borderRadius: 8, padding: "10px", color: "#FF6666", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 10 },
+  distressCallRow: { display: "flex", gap: 8, marginBottom: 10 },
+  distressCallBtn: { flex: 1, textAlign: "center", background: "linear-gradient(135deg,#FF2D2D,#990000)", borderRadius: 8, padding: "8px 4px", color: "#fff", fontSize: 11, fontWeight: 800, textDecoration: "none", lineHeight: 1.5, fontFamily: "'Barlow Condensed',sans-serif" },
+  distressDismiss: { width: "100%", background: "transparent", border: "1px solid #2a2a2a", color: "#666", borderRadius: 8, padding: "9px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: 1 },
   stateCard: { width: "100%", background: "#0c0c0c", border: "1px solid #161616", borderRadius: 12, padding: "13px 14px", marginBottom: 7, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" },
   natBtn: { flex: 1, background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: "12px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" },
   savedBanner: { margin: "12px 14px 0", width: "calc(100% - 28px)", background: "#00FF8808", border: "1px solid #00FF8820", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" },
