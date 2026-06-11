@@ -58,7 +58,7 @@ export default function AdminDashboard({ session, onBack }) {
     setLoading(true);
     const today = new Date().toISOString().slice(0, 10);
     const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, supportRes, subsRes, dauRes] = await Promise.all([
-      supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
+      supabase.rpc("get_all_users"),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
       supabase.from("admin_roles").select("*").order("created_at", { ascending: false }),
@@ -120,11 +120,7 @@ export default function AdminDashboard({ session, onBack }) {
 
   const addAdminRole = async () => {
     if (!newAdminEmail) return;
-    const { data: userData } = await supabase
-      .from("admin_users")
-      .select("user_id")
-      .eq("email", newAdminEmail)
-      .single();
+    const userData = users.find(u => u.email === newAdminEmail);
     if (!userData) { showToast("User not found", "#FF2D2D"); return; }
     const { error } = await supabase.from("admin_roles").insert({
       user_id: userData.user_id,

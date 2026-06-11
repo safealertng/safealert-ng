@@ -3366,7 +3366,18 @@ function SubscriptionPlans({ session, onBack }) {
         })
         .select("*, subscription_plans(*)")
         .single();
-      if (created) setCurrentPlan(created);
+      if (created) {
+        setCurrentPlan(created);
+        return;
+      }
+      // Another concurrent enroll already created the row — use that one
+      const { data: existing } = await supabase
+        .from("user_subscriptions")
+        .select("*, subscription_plans(*)")
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .single();
+      if (existing) setCurrentPlan(existing);
     };
     fetchCurrentPlan();
   }, [session]);
