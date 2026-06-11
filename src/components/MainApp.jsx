@@ -120,7 +120,13 @@ export default function MainApp({ session }) {
   const [checkInMsg, setCheckInMsg] = useState(null);
   const [hasOwnPushSubscription, setHasOwnPushSubscription] = useState(true);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
-  const [pushSetupMsg, setPushSetupMsg] = useState(null);
+  const iosPushUnsupported = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+    const pushSupported = "serviceWorker" in navigator && "PushManager" in window;
+    return isIOS && !isStandalone && !pushSupported;
+  }, []);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -237,27 +243,6 @@ export default function MainApp({ session }) {
     logActivity();
   }, [session?.user?.id]);
 
-  useEffect(() => {
-    const loadFamily = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
-      const { data, error } = await supabase
-        .from('family_members')
-        .select('id, nickname, relation, phone, member_user_id, last_lat, last_lng, last_seen')
-        .eq('owner_id', session.user.id);
-      if (error) { console.error('Family fetch error:', error.message); return; }
-      console.log('Family members loaded:', data);
-      const enriched = await Promise.all((data ?? []).map(async m => {
-        if (m.last_lat && m.last_lng) {
-          const address = await reverseGeocode(m.last_lat, m.last_lng);
-          return { ...m, location: address };
-        }
-        return { ...m, location: m.member_user_id ? "📱 App Connected" : (m.phone || "No location yet") };
-      }));
-      setFamilyMembers(enriched);
-    };
-    loadFamily();
-  }, []);
   const [panicStage, setPanicStage] = useState("idle");
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
@@ -297,8 +282,15 @@ export default function MainApp({ session }) {
       .select('id, nickname, relation, phone, member_user_id, last_lat, last_lng, last_seen')
       .eq("owner_id", session?.user?.id);
     if (!error && data) {
-      setFamilyMembers(data);
-      fetchFamilyPushStatus(data);
+      const enriched = await Promise.all(data.map(async m => {
+        if (m.last_lat && m.last_lng) {
+          const address = await reverseGeocode(m.last_lat, m.last_lng);
+          return { ...m, location: address };
+        }
+        return { ...m, location: m.member_user_id ? "📱 App Connected" : (m.phone || "No location yet") };
+      }));
+      setFamilyMembers(enriched);
+      fetchFamilyPushStatus(enriched);
     }
   };
 
@@ -605,22 +597,14 @@ export default function MainApp({ session }) {
 
   const enableFamilyNotifications = async () => {
     setEnablingNotifications(true);
-    setPushSetupMsg(null);
     // Request permission directly inside this tap handler first — on iOS
     // Safari, requestPermission() must run with a live user-gesture context,
     // which is lost if any awaits (e.g. service worker registration) happen first.
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       await Notification.requestPermission();
     }
-    const result = await setupPushNotifications();
+    await setupPushNotifications();
     await checkOwnPushSubscription();
-    if (result === "unsupported") {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      const isStandalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-      if (isIOS && !isStandalone) {
-        setPushSetupMsg("To receive alerts on iPhone, add SafeAlertNG to your Home Screen first: tap the Share button then Add to Home Screen, then open the app from your home screen and enable alerts");
-      }
-    }
     setEnablingNotifications(false);
   };
 
@@ -1021,16 +1005,33 @@ export default function MainApp({ session }) {
     <Shell shakeFlash={false}>
       <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
       {!hasOwnPushSubscription && (
-        <>
+        iosPushUnsupported ? (
+          <div style={{ margin: "12px 16px 0", background: "#00BFFF18", border: "1px solid #00BFFF44", borderRadius: 12, padding: 14 }}>
+            <div style={{ color: "#00BFFF", fontSize: 13, fontWeight: 800, textAlign: "center", lineHeight: 1.5 }}>
+              📱 For iPhone users: tap the Share button below then Add to Home Screen to get family alerts
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 26 }}>📤</div>
+                <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>Share</div>
+              </div>
+              <div style={{ color: "#00BFFF44", fontSize: 16 }}>→</div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 26 }}>➕</div>
+                <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>Add to Home Screen</div>
+              </div>
+              <div style={{ color: "#00BFFF44", fontSize: 16 }}>→</div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 26 }}>🔔</div>
+                <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>Enable Alerts</div>
+              </div>
+            </div>
+          </div>
+        ) : (
           <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ display: "block", width: "calc(100% - 32px)", margin: "12px 16px 0", background: "linear-gradient(135deg,#FF6B00,#CC5500)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: 0.5, opacity: enablingNotifications ? 0.7 : 1 }}>
             {enablingNotifications ? "Enabling…" : "🔔 Tap here to enable family alerts"}
           </button>
-          {pushSetupMsg && (
-            <div style={{ margin: "8px 16px 0", padding: "10px 12px", borderRadius: 8, background: "#00BFFF18", border: "1px solid #00BFFF44", color: "#00BFFF", fontSize: 12, fontWeight: 700, lineHeight: 1.5 }}>
-              {pushSetupMsg}
-            </div>
-          )}
-        </>
+        )
       )}
       {addingMember && (
         <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 12, padding: 14 }}>
