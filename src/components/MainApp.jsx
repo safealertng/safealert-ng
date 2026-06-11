@@ -143,9 +143,13 @@ export default function MainApp({ session }) {
             const data = await res.json();
             const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
             const state = data.address.state || data.address.region || "";
-            setUserLocation(city && state ? `${city}, ${state}` : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
+            const loc = city && state ? `${city}, ${state}` : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+            setUserLocation(loc);
+            userLocationRef.current = loc;
           } catch {
-            setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            setUserLocation(fallback);
+            userLocationRef.current = fallback;
           }
         },
         () => (err) => {
@@ -484,9 +488,9 @@ export default function MainApp({ session }) {
             reporter_id: userId,
             type: "other",
             description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
-            lat: userCoords?.lat || 0,
-            lng: userCoords?.lng || 0,
-            state: userLocation && userLocation !== "Locating..." ? userLocation : "Unknown",
+            lat: userCoordsRef.current?.lat || 0,
+            lng: userCoordsRef.current?.lng || 0,
+            state: userLocationRef.current && userLocationRef.current !== "Locating..." ? userLocationRef.current : "Unknown",
             status: "active",
             video_url: urlData.publicUrl,
           });
@@ -712,23 +716,22 @@ export default function MainApp({ session }) {
       });
     } catch (e) { console.error("Push to all devices error:", e); }
     // Notify app-connected family members directly via Family Tracker
-    try {
-      await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-panic-alert", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-          "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-        },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          userName: session?.user?.user_metadata?.full_name,
-          lat: userCoordsRef.current?.lat,
-          lng: userCoordsRef.current?.lng,
-          location: userLocationRef.current,
-        }),
-      });
-    } catch (e) { console.error("Family panic alert error:", e); }
+    // (fire-and-forget — must not block camera/recording startup below)
+    fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-panic-alert", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+        "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+      },
+      body: JSON.stringify({
+        userId: session?.user?.id,
+        userName: session?.user?.user_metadata?.full_name,
+        lat: userCoordsRef.current?.lat,
+        lng: userCoordsRef.current?.lng,
+        location: userLocationRef.current,
+      }),
+    }).catch(e => console.error("Family panic alert error:", e));
     // Auto-send WhatsApp alerts to all family members
     familyMembers.forEach(m => {
     });
