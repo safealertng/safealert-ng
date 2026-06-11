@@ -47,6 +47,45 @@ const COORD_PAIR_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 // and can be off by tens or hundreds of km — warn before submitting a report.
 const LOW_ACCURACY_THRESHOLD_M = 5000;
 
+// Resolves "City, State" for a coordinate pair via Nominatim, or null if unavailable.
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`,
+      { headers: { "User-Agent": "SafeAlertNG/1.0" } }
+    );
+    const data = await res.json();
+    const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
+    const state = data.address?.state || data.address?.region || "";
+    return city && state ? `${city}, ${state}` : null;
+  } catch {
+    return null;
+  }
+}
+
+// Tries a high-accuracy GPS fix first; on error or timeout, falls back to a
+// faster network/IP-based fix rather than giving up entirely.
+function getLocationWithFallback() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve(pos),
+      (err) => {
+        console.error("GPS error (high accuracy):", err);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve(pos),
+          (err2) => {
+            console.error("GPS error (fallback):", err2);
+            resolve(null);
+          },
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
 const STATES = [
   { state: "Abia", zone: "South East", police: { command: "Abia State Police Command", number: "08033418481", commissioner: "CP Danladi Mamman" }, agencies: [{ name: "NSCDC Abia", number: "08036673645", icon: "⚔️" }, { name: "DSS Abia", number: "08033001234", icon: "🛡️" }, { name: "FRSC Abia", number: "08039483333", icon: "🚦" }, { name: "Fire Service Aba", number: "08034567890", icon: "🔥" }, { name: "FMC Umuahia", number: "08037654321", icon: "🏥" }, { name: "NDLEA Abia", number: "08033100001", icon: "💊" }, { name: "NEMA Abia", number: "08033200001", icon: "🆘" }, { name: "Nigerian Red Cross Abia", number: "08033300001", icon: "🏨" }, { name: "NIS Immigration Abia", number: "08033400001", icon: "🛂" }, { name: "Customs Abia", number: "08033500001", icon: "🏛️" }] },
   { state: "Adamawa", zone: "North East", police: { command: "Adamawa State Police Command", number: "08033456789", commissioner: "CP Sikiru Akande" }, agencies: [{ name: "NSCDC Adamawa", number: "08036674567", icon: "⚔️" }, { name: "DSS Adamawa", number: "08033002345", icon: "🛡️" }, { name: "FRSC Adamawa", number: "08039484444", icon: "🚦" }, { name: "SEMA Adamawa", number: "08035678901", icon: "🆘" }, { name: "Specialist Hospital Yola", number: "08037665432", icon: "🏥" }, { name: "NDLEA Adamawa", number: "08033100002", icon: "💊" }, { name: "NEMA Adamawa", number: "08033200002", icon: "🆘" }, { name: "Nigerian Red Cross Adamawa", number: "08033300002", icon: "🏨" }, { name: "NIS Immigration Adamawa", number: "08033400002", icon: "🛂" }, { name: "Customs Adamawa", number: "08033500002", icon: "🏛️" }] },
@@ -112,33 +151,25 @@ export default function MainApp({ session }) {
   const mimeTypeRef = useRef("video/webm");
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude, accuracy } = position.coords;
-          setUserCoords({ lat: latitude, lng: longitude });
-          userCoordsRef.current = { lat: latitude, lng: longitude };
-          userAccuracyRef.current = accuracy;
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
-              { headers: { "User-Agent": "SafeAlertNG/1.0" } }
-            );
-            const data = await res.json();
-            const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
-            const state = data.address.state || data.address.region || "";
-            setUserLocation(city && state ? `${city}, ${state}` : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`);
-          } catch {
-            setUserLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-          }
-        },
-        (err) => {
-          console.error("GPS error:", err);
-          setUserLocation("Location unavailable");
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    }
+    if (!navigator.geolocation) return;
+    let cancelled = false;
+    (async () => {
+      const pos = await getLocationWithFallback();
+      if (cancelled) return;
+      if (!pos) {
+        setUserLocation("Location unavailable");
+        return;
+      }
+      const { latitude, longitude, accuracy } = pos.coords;
+      setUserCoords({ lat: latitude, lng: longitude });
+      userCoordsRef.current = { lat: latitude, lng: longitude };
+      userAccuracyRef.current = accuracy;
+      const name = (await reverseGeocode(latitude, longitude)) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      if (cancelled) return;
+      setUserLocation(name);
+      userLocationRef.current = name;
+    })();
+    return () => { cancelled = true; };
   }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
   // GPS tracking — auto-link by phone + update location every 5 minutes
   useEffect(() => {
@@ -519,33 +550,17 @@ export default function MainApp({ session }) {
 
   const startBroadcast = async () => {
     try {
-      if (navigator.geolocation && (!userCoords || userLocation === "Locating...")) {
-        await new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-              const { latitude, longitude, accuracy } = pos.coords;
-              setUserCoords({ lat: latitude, lng: longitude });
-              userCoordsRef.current = { lat: latitude, lng: longitude };
-              userAccuracyRef.current = accuracy;
-              try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
-                const data = await res.json();
-                const city = data.address?.city || data.address?.town || data.address?.village || "";
-                const state = data.address?.state || "";
-                const loc = city && state ? `${city}, ${state}` : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-                setUserLocation(loc);
-                userLocationRef.current = loc;
-              } catch (err) {
-                const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-                setUserLocation(fallback);
-                userLocationRef.current = fallback;
-              }
-              resolve(null);
-            },
-            () => resolve(null),
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
-        });
+      if (navigator.geolocation && (!userCoords || userLocation === "Locating..." || userLocation === "Location unavailable")) {
+        const pos = await getLocationWithFallback();
+        if (pos) {
+          const { latitude, longitude, accuracy } = pos.coords;
+          setUserCoords({ lat: latitude, lng: longitude });
+          userCoordsRef.current = { lat: latitude, lng: longitude };
+          userAccuracyRef.current = accuracy;
+          const loc = (await reverseGeocode(latitude, longitude)) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setUserLocation(loc);
+          userLocationRef.current = loc;
+        }
       }
       const currentLocation = userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Unknown";
       await supabase.from("panic_events").insert({
@@ -587,28 +602,19 @@ export default function MainApp({ session }) {
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     locationIntervalRef.current = setInterval(async () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          userCoordsRef.current = { lat, lng };
-          userAccuracyRef.current = pos.coords.accuracy;
-          let locationName = userLocationRef.current;
-          try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
-            const data = await res.json();
-            const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
-            const state = data.address?.state || "";
-            if (city && state) locationName = `${city}, ${state}`;
-          } catch (err) { console.error("Reverse geocode error:", err); }
-          setUserLocation(locationName);
-          userLocationRef.current = locationName;
-          await supabase.from("panic_events")
-            .update({ lat, lng, state: locationName })
-            .eq("user_id", session?.user?.id)
-            .eq("resolved", false);
-        }, null, { enableHighAccuracy: true, maximumAge: 0 });
-      }
+      const pos = await getLocationWithFallback();
+      if (!pos) return;
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      userCoordsRef.current = { lat, lng };
+      userAccuracyRef.current = pos.coords.accuracy;
+      const locationName = (await reverseGeocode(lat, lng)) || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      setUserLocation(locationName);
+      userLocationRef.current = locationName;
+      await supabase.from("panic_events")
+        .update({ lat, lng, state: locationName })
+        .eq("user_id", session?.user?.id)
+        .eq("resolved", false);
     }, 10000);
     let p = 0;
     upRef.current = setInterval(() => {
