@@ -608,6 +608,19 @@ export default function MainApp({ session }) {
     setEnablingNotifications(false);
   };
 
+  const shareFamilyTrackerApp = async () => {
+    if (!navigator.share) return;
+    try {
+      await navigator.share({
+        title: "SafeAlert NG",
+        text: "SafeAlert NG — Family Tracker & Emergency Alerts",
+        url: window.location.origin,
+      });
+    } catch {
+      // user cancelled the share sheet — nothing to do
+    }
+  };
+
   useEffect(() => {
     if (videoSaved) {
       setPanicStage("idle"); setPanicCount(5);
@@ -1011,20 +1024,20 @@ export default function MainApp({ session }) {
               📱 For iPhone users: tap the Share button below then Add to Home Screen to get family alerts
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 12 }}>
-              <div style={{ textAlign: "center" }}>
+              <button onClick={shareFamilyTrackerApp} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "center", fontFamily: "'Barlow Condensed',sans-serif" }}>
                 <div style={{ fontSize: 26 }}>📤</div>
                 <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>Share</div>
-              </div>
+              </button>
               <div style={{ color: "#00BFFF44", fontSize: 16 }}>→</div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 26 }}>➕</div>
                 <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>Add to Home Screen</div>
               </div>
               <div style={{ color: "#00BFFF44", fontSize: 16 }}>→</div>
-              <div style={{ textAlign: "center" }}>
+              <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "center", fontFamily: "'Barlow Condensed',sans-serif", opacity: enablingNotifications ? 0.6 : 1 }}>
                 <div style={{ fontSize: 26 }}>🔔</div>
-                <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>Enable Alerts</div>
-              </div>
+                <div style={{ fontSize: 9, color: "#00BFFF", marginTop: 4, fontWeight: 700 }}>{enablingNotifications ? "…" : "Enable Alerts"}</div>
+              </button>
             </div>
           </div>
         ) : (
