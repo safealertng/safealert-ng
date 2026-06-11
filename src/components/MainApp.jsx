@@ -106,6 +106,7 @@ export default function MainApp({ session }) {
   const userCoordsRef = useRef(null);
   const mimeTypeRef = useRef("video/webm");
   const shakeSOS = useShakeToSOS(session);
+  const [shakeStatusMsg, setShakeStatusMsg] = useState(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -924,18 +925,40 @@ export default function MainApp({ session }) {
             </div>
           </div>
           <div style={{ ...S.card, marginTop: 8 }}>
-            <MicroLabel>SHAKE-TO-SOS SETUP</MicroLabel>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <MicroLabel>SHAKE-TO-SOS SETUP</MicroLabel>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: shakeSOS.armed ? "#00FF88" : "#666" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: shakeSOS.armed ? "#00FF88" : "#444", boxShadow: shakeSOS.armed ? "0 0 6px #00FF88" : "none" }} />
+                {shakeSOS.armed ? "ARMED" : "NOT ARMED"}
+              </div>
+            </div>
             <div style={{ color: "#555", fontSize: 12, marginTop: 4 }}>
               {shakeSOS.active
                 ? "🔴 Silent SOS is active for this device — shake 3× again to cancel."
+                : shakeSOS.armed
+                ? "Shake your phone 3× rapidly to silently alert your family contacts with your live location."
                 : "Enable motion access once so this device can detect your 3x shake gesture."}
             </div>
             <button
-              onClick={async () => { await shakeSOS.requestPermission(); }}
+              onClick={async () => {
+                const result = await shakeSOS.requestPermission();
+                if (result === "granted") {
+                  setShakeStatusMsg({ type: "success", text: "✅ Motion access enabled — shake your phone 3× rapidly to trigger or cancel silent SOS." });
+                } else if (result === "unsupported") {
+                  setShakeStatusMsg({ type: "error", text: "⚠️ This device or browser doesn't support motion detection, so shake-to-SOS isn't available here." });
+                } else {
+                  setShakeStatusMsg({ type: "error", text: "⚠️ Motion permission denied. Enable motion & orientation access for this site in your device settings to use shake-to-SOS." });
+                }
+              }}
               style={{ marginTop: 10, width: "100%", background: "#111", border: "1px solid #222", borderRadius: 8, padding: "10px", color: "#00FF88", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}
             >
               Enable Shake-to-SOS
             </button>
+            {shakeStatusMsg && (
+              <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: shakeStatusMsg.type === "error" ? "#FF2D2D" : "#00FF88" }}>
+                {shakeStatusMsg.text}
+              </div>
+            )}
           </div>
         </div>
       )}

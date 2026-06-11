@@ -11,10 +11,20 @@ const COOLDOWN_MS = 2000; // pause detection right after a successful toggle
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+const isMotionSupported = () =>
+  typeof window !== "undefined" && "DeviceMotionEvent" in window;
+
+const needsExplicitPermission = () =>
+  typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function";
+
 // Detects 3 rapid phone shakes and silently toggles a live-location SOS to
-// the user's own family tracker contacts. No UI feedback by design.
+// the user's own family tracker contacts. No sound/visual feedback on
+// trigger by design — `armed` below is only for the setup screen.
 export default function useShakeToSOS(session) {
   const [active, setActive] = useState(false);
+  // Devices that don't need an explicit permission prompt are armed as soon
+  // as the listener is attached; iOS 13+ needs a user gesture first.
+  const [armed, setArmed] = useState(() => isMotionSupported() && !needsExplicitPermission());
   const activeRef = useRef(false);
   const lastAccel = useRef({ x: 0, y: 0, z: 0 });
   const shakeTimes = useRef([]);
@@ -124,18 +134,26 @@ export default function useShakeToSOS(session) {
     return () => window.removeEventListener("devicemotion", handleMotion);
   }, [session?.user?.id]);
 
-  // iOS 13+ requires an explicit, user-gesture-triggered permission request
+  // iOS 13+ requires an explicit, user-gesture-triggered permission request.
+  // Returns "granted" | "denied" | "unsupported" so the UI can confirm/error.
   const requestPermission = async () => {
-    if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
-      try {
-        const result = await DeviceMotionEvent.requestPermission();
-        return result === "granted";
-      } catch {
-        return false;
-      }
+    if (!isMotionSupported()) return "unsupported";
+
+    if (!needsExplicitPermission()) {
+      setArmed(true);
+      return "granted";
     }
-    return true;
+
+    try {
+      const result = await DeviceMotionEvent.requestPermission();
+      const granted = result === "granted";
+      setArmed(granted);
+      return granted ? "granted" : "denied";
+    } catch {
+      setArmed(false);
+      return "denied";
+    }
   };
 
-  return { active, requestPermission };
+  return { active, armed, requestPermission };
 }
