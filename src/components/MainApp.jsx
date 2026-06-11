@@ -143,7 +143,7 @@ export default function MainApp({ session }) {
       );
     }
   }, []); // home|report|family|alerts|contacts|convoy|ransom|tipline
-  // GPS tracking — auto-link by phone + update location every 5 minutes
+  // GPS tracking — auto-link by phone + share live location with app-connected family every 60s
   useEffect(() => {
     const updateLocation = async () => {
       if (!session?.user?.id) return;
@@ -161,15 +161,8 @@ export default function MainApp({ session }) {
             .is('member_user_id', null);
         }
 
-        // Update location where member_user_id matches
-        await supabase
-          .from('family_members')
-          .update({
-            last_lat: lat,
-            last_lng: lng,
-            last_seen: new Date().toISOString()
-          })
-          .eq('member_user_id', session.user.id);
+        // Share my live location with everyone who has added me as family on the app
+        await supabase.rpc('update_my_location', { p_lat: lat, p_lng: lng });
 
         // Also update owner's own location in their family records
         await supabase
@@ -185,7 +178,7 @@ export default function MainApp({ session }) {
     };
 
     updateLocation();
-    const interval = setInterval(updateLocation, 5 * 60 * 1000);
+    const interval = setInterval(updateLocation, 60 * 1000);
     return () => clearInterval(interval);
   }, [session]);
 
@@ -546,6 +539,9 @@ export default function MainApp({ session }) {
         () => { fetchFamily(); fetchPendingFamilyRequests(); }
       )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "family_members", filter: `owner_id=eq.${uid}` },
+        () => fetchFamily()
+      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "family_members", filter: `owner_id=eq.${uid}` },
         () => fetchFamily()
       )
       .subscribe();
