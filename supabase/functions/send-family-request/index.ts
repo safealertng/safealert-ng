@@ -12,7 +12,7 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   try {
-    const { toUserId, fromName, action } = await req.json();
+    const { toUserId, fromUserId, fromName, action } = await req.json();
 
     if (!toUserId) {
       return new Response(JSON.stringify({ error: "Missing toUserId" }), { status: 400, headers: corsHeaders });
@@ -39,20 +39,16 @@ serve(async (req) => {
     }
 
     const name = fromName || "Someone";
-    const payload = action === "accepted"
-      ? JSON.stringify({
-          title: "SafeAlert NG",
-          body: `${name} accepted your family request — you're now connected on Family Tracker.`,
-        })
+    const body = action === "accepted"
+      ? `${name} accepted your family request — you're now connected on Family Tracker.`
       : action === "checkin"
-      ? JSON.stringify({
-          title: "SafeAlert NG",
-          body: `${name} is checking on you — please respond.`,
-        })
-      : JSON.stringify({
-          title: "SafeAlert NG",
-          body: `${name} wants to add you as family on SafeAlertNG.`,
-        });
+      ? `${name} is checking on you — please respond.`
+      : `${name} wants to add you as family on SafeAlertNG.`;
+    const payload = JSON.stringify({
+      title: "SafeAlert NG",
+      body,
+      fromUserId: fromUserId || null,
+    });
 
     const results = await Promise.allSettled(
       subscriptions.map(({ subscription }) => webpush.sendNotification(subscription, payload))

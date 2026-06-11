@@ -113,6 +113,9 @@ export default function MainApp({ session }) {
   const [familySearching, setFamilySearching] = useState(false);
   const [familySearchMsg, setFamilySearchMsg] = useState(null);
   const [pendingFamilyRequests, setPendingFamilyRequests] = useState([]);
+  const [pendingFamilyAlerts, setPendingFamilyAlerts] = useState([]);
+  const [dismissingAlertId, setDismissingAlertId] = useState(null);
+  const [pendingFamilyDeepLink, setPendingFamilyDeepLink] = useState(null);
   const [sendingRequestTo, setSendingRequestTo] = useState(null);
   const [respondingRequestId, setRespondingRequestId] = useState(null);
   const [familyPushStatus, setFamilyPushStatus] = useState(new Set());
@@ -308,6 +311,18 @@ export default function MainApp({ session }) {
     if (!error && data) setPendingFamilyRequests(data);
   };
 
+  const fetchPendingFamilyAlerts = async () => {
+    const { data, error } = await supabase.rpc("get_pending_family_alerts");
+    if (!error && data) setPendingFamilyAlerts(data);
+  };
+
+  const dismissFamilyAlert = async (id) => {
+    setDismissingAlertId(id);
+    await supabase.from("family_alerts").update({ read_at: new Date().toISOString() }).eq("id", id);
+    setPendingFamilyAlerts(prev => prev.filter(a => a.id !== id));
+    setDismissingAlertId(null);
+  };
+
   const searchFamilyUsers = async () => {
     const q = familySearchQuery.trim();
     if (q.length < 2) {
@@ -348,6 +363,7 @@ export default function MainApp({ session }) {
         },
         body: JSON.stringify({
           toUserId: user.id,
+          fromUserId: session?.user?.id,
           fromName: session?.user?.user_metadata?.full_name || "A SafeAlertNG user",
           action: "request",
         }),
@@ -373,6 +389,7 @@ export default function MainApp({ session }) {
           },
           body: JSON.stringify({
             toUserId: request.from_user_id,
+            fromUserId: session?.user?.id,
             fromName: session?.user?.user_metadata?.full_name || "A SafeAlertNG user",
             action: "accepted",
           }),
@@ -385,6 +402,20 @@ export default function MainApp({ session }) {
     if (!member.member_user_id) return;
     setSendingCheckInTo(member.id);
     setCheckInMsg(null);
+
+    // Save the alert first so the recipient sees it next time they open the
+    // app even if they have no push subscription — push below is best-effort.
+    const { error: insertError } = await supabase.from("family_alerts").insert({
+      from_user_id: session?.user?.id,
+      to_user_id: member.member_user_id,
+      type: "checkin",
+    });
+    if (insertError) {
+      setCheckInMsg({ type: "error", text: "Failed to send alert. Try again." });
+      setSendingCheckInTo(null);
+      return;
+    }
+
     try {
       const res = await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-request", {
         method: "POST",
@@ -395,6 +426,7 @@ export default function MainApp({ session }) {
         },
         body: JSON.stringify({
           toUserId: member.member_user_id,
+          fromUserId: session?.user?.id,
           fromName: session?.user?.user_metadata?.full_name || "A family member",
           action: "checkin",
         }),
@@ -403,10 +435,10 @@ export default function MainApp({ session }) {
       if (data?.sent > 0) {
         setCheckInMsg({ type: "ok", text: `Alert sent to ${member.nickname}.` });
       } else {
-        setCheckInMsg({ type: "error", text: `${member.nickname} hasn't enabled notifications yet.` });
+        setCheckInMsg({ type: "ok", text: `Alert saved — ${member.nickname} will see it next time they open the app.` });
       }
     } catch (e) {
-      setCheckInMsg({ type: "error", text: "Failed to send alert. Try again." });
+      setCheckInMsg({ type: "ok", text: `Alert saved — ${member.nickname} will see it next time they open the app.` });
     }
     setSendingCheckInTo(null);
   };
@@ -467,20 +499,42 @@ export default function MainApp({ session }) {
 
       // Start recording
       try {
-        const recorder = new MediaRecorder(mediaStream, { mimeType: "video/webm" });
+        // iOS Safari doesn't support video/webm — pick whatever this browser
+        // can actually record, falling back to its own default.
+        const mimeCandidates = [
+          "video/mp4;codecs=h264,aac",
+          "video/mp4",
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm",
+        ];
+        const supportedMimeType = mimeCandidates.find(
+          (type) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.(type)
+        );
+        let recorder;
+        try {
+          recorder = supportedMimeType
+            ? new MediaRecorder(mediaStream, { mimeType: supportedMimeType })
+            : new MediaRecorder(mediaStream);
+        } catch {
+          recorder = new MediaRecorder(mediaStream);
+        }
+        mimeTypeRef.current = recorder.mimeType || supportedMimeType || "video/webm";
         const chunks = [];
         recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = async () => {
           if (chunks.length === 0) { console.warn("No chunks recorded"); return; }
-          const blob = new Blob(chunks, { type: "video/webm" });
-          console.log("Uploading video blob, size:", blob.size);
+          const mimeType = mimeTypeRef.current;
+          const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+          const blob = new Blob(chunks, { type: mimeType });
+          console.log("Uploading video blob, size:", blob.size, "type:", mimeType);
           const { data: { session: currentSession } } = await supabase.auth.getSession();
           const userId = currentSession?.user?.id || session?.user?.id;
           if (!userId) { console.error("No session for upload"); return; }
-          const fileName = `panic-${userId}-${Date.now()}.webm`;
+          const fileName = `panic-${userId}-${Date.now()}.${ext}`;
           const { error: uploadError } = await supabase.storage
             .from("incident-videos")
-            .upload(fileName, blob, { contentType: "video/webm" });
+            .upload(fileName, blob, { contentType: mimeType });
           if (uploadError) { console.error("Upload error:", uploadError); return; }
           const { data: urlData } = supabase.storage.from("incident-videos").getPublicUrl(fileName);
           console.log("Video uploaded:", urlData.publicUrl);
@@ -580,6 +634,7 @@ export default function MainApp({ session }) {
     if (!uid) return;
     fetchFamily();
     fetchPendingFamilyRequests();
+    fetchPendingFamilyAlerts();
     checkOwnPushSubscription();
     const channel = supabase
       .channel(`family-${uid}`)
@@ -595,9 +650,41 @@ export default function MainApp({ session }) {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "family_members", filter: `owner_id=eq.${uid}` },
         () => fetchFamily()
       )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "family_alerts", filter: `to_user_id=eq.${uid}` },
+        () => fetchPendingFamilyAlerts()
+      )
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [session?.user?.id]);
+
+  // Deep-link from a clicked family notification (check-in / accepted / panic).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const openFamily = params.get("openFamily");
+    if (openFamily) setPendingFamilyDeepLink(openFamily);
+  }, []);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      if (event.data?.type === "OPEN_FAMILY_MEMBER" && event.data.userId) {
+        setPendingFamilyDeepLink(event.data.userId);
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingFamilyDeepLink || familyMembers.length === 0) return;
+    const member = familyMembers.find(m => m.member_user_id === pendingFamilyDeepLink);
+    if (member) {
+      setNav("family");
+      setSelectedMember(member);
+      setPendingFamilyDeepLink(null);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [pendingFamilyDeepLink, familyMembers]);
 
   const enableFamilyNotifications = async () => {
     setEnablingNotifications(true);
@@ -1101,6 +1188,26 @@ export default function MainApp({ session }) {
               </div>
               <button onClick={() => respondFamilyRequest(r, true)} disabled={respondingRequestId === r.id} style={{ flexShrink: 0, background: "#00FF8822", border: "1px solid #00FF8844", borderRadius: 6, padding: "6px 10px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>Accept</button>
               <button onClick={() => respondFamilyRequest(r, false)} disabled={respondingRequestId === r.id} style={{ flexShrink: 0, marginLeft: 6, background: "#1a1a1a", border: "1px solid #FF2D2D33", borderRadius: 6, padding: "6px 10px", color: "#FF2D2D", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>Decline</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {pendingFamilyAlerts.length > 0 && (
+        <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #00BFFF44", borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#00BFFF", marginBottom: 10, fontFamily: "monospace" }}>FAMILY ALERTS</div>
+          {pendingFamilyAlerts.map(a => (
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #161616" }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                {a.type === "panic" ? "🚨" : "🔔"}
+              </div>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#ccc" }}>
+                <span style={{ fontWeight: 800 }}>{a.from_name || "A family member"}</span>{" "}
+                {a.type === "panic" ? "triggered a panic alert" : "is checking on you — are you safe?"}
+                <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>{new Date(a.created_at).toLocaleString("en-NG")}</div>
+              </div>
+              <button onClick={() => dismissFamilyAlert(a.id)} disabled={dismissingAlertId === a.id} style={{ flexShrink: 0, background: "#00FF8822", border: "1px solid #00FF8844", borderRadius: 6, padding: "6px 10px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>
+                {dismissingAlertId === a.id ? "…" : "✓ I'm OK"}
+              </button>
             </div>
           ))}
         </div>

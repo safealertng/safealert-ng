@@ -47,6 +47,7 @@ serve(async (req) => {
     const payload = JSON.stringify({
       title: "🚨 PANIC ALERT — SafeAlertNG",
       body: `${name} triggered a PANIC alert${location ? ` near ${location}` : ""}.${mapsLink}`,
+      fromUserId: userId,
     });
 
     const results = await Promise.allSettled(

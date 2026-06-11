@@ -47,11 +47,13 @@ serve(async (req) => {
           title: "SafeAlert NG",
           body: "Silent SOS cancelled — they're okay now.",
           silent: true,
+          fromUserId: userId,
         })
       : JSON.stringify({
           title: "SafeAlert NG",
           body: `Silent SOS — live location: https://maps.google.com/?q=${lat},${lng}`,
           silent: true,
+          fromUserId: userId,
         });
 
     const results = await Promise.allSettled(
