@@ -88,6 +88,28 @@ const STATES = [
 const ZONES = ["All", "North West", "North East", "North Central", "South West", "South South", "South East"];
 const ZONE_COLORS = { "North West": "#4A90D9", "North East": "#E67E22", "North Central": "#27AE60", "South West": "#8E44AD", "South South": "#16A085", "South East": "#C0392B" };
 
+// Cache reverse-geocoded "City, State" names by rounded coordinate so repeat
+// lookups (and re-renders) don't hammer the Nominatim API.
+const familyLocationCache = new Map();
+
+// Lightweight cross-screen store so a pending family alert (e.g. a check-in
+// request that couldn't be pushed) shows as a banner on whatever screen the
+// recipient currently has open, not just the Family Tracker.
+let familyAlertStore = { alerts: [], onOpen: () => {}, onDismiss: () => {} };
+const familyAlertSubscribers = new Set();
+function publishFamilyAlertStore(next) {
+  familyAlertStore = next;
+  familyAlertSubscribers.forEach(fn => fn(next));
+}
+function useFamilyAlertStore() {
+  const [state, setState] = useState(familyAlertStore);
+  useEffect(() => {
+    familyAlertSubscribers.add(setState);
+    return () => familyAlertSubscribers.delete(setState);
+  }, []);
+  return state;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ROOT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -258,15 +280,21 @@ export default function MainApp({ session }) {
   const agoraVideoRef = useRef(null);
 
   const reverseGeocode = async (lat, lng) => {
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    const cached = familyLocationCache.get(key);
+    if (cached) return cached;
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`,
         { headers: { "User-Agent": "SafeAlertNG/1.0" } }
       );
       const data = await res.json();
-      const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || "";
-      const state = data.address?.state || "";
-      return city && state ? `${city}, ${state}` : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      const a = data.address || {};
+      const city = a.city || a.town || a.village || a.suburb || a.county || a.state_district || "";
+      const state = a.state || a.region || "";
+      const name = city && state ? `${city}, ${state}` : (city || state || `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      if (city || state) familyLocationCache.set(key, name);
+      return name;
     } catch { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
   };
   const fetchFamilyPushStatus = async (members) => {
@@ -289,13 +317,17 @@ export default function MainApp({ session }) {
       .select('id, nickname, relation, phone, member_user_id, last_lat, last_lng, last_seen')
       .eq("owner_id", session?.user?.id);
     if (!error && data) {
-      const enriched = await Promise.all(data.map(async m => {
+      // Resolve one at a time (not Promise.all) — concurrent requests to
+      // Nominatim get rate-limited and fall back to raw coordinates.
+      const enriched = [];
+      for (const m of data) {
         if (m.last_lat && m.last_lng) {
           const address = await reverseGeocode(m.last_lat, m.last_lng);
-          return { ...m, location: address };
+          enriched.push({ ...m, location: address });
+        } else {
+          enriched.push({ ...m, location: m.member_user_id ? "📱 App Connected" : (m.phone || "No location yet") });
         }
-        return { ...m, location: m.member_user_id ? "📱 App Connected" : (m.phone || "No location yet") };
-      }));
+      }
       setFamilyMembers(enriched);
       fetchFamilyPushStatus(enriched);
     }
@@ -685,6 +717,35 @@ export default function MainApp({ session }) {
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, [pendingFamilyDeepLink, familyMembers]);
+
+  // If the selected member's location is still raw coordinates (the bulk
+  // fetch above can get rate-limited by Nominatim), resolve it again here —
+  // a single request is much less likely to be throttled.
+  useEffect(() => {
+    const lat = selectedMember?.last_lat;
+    const lng = selectedMember?.last_lng;
+    if (!lat || !lng) return;
+    const raw = `${Number(lat).toFixed(4)}, ${Number(lng).toFixed(4)}`;
+    if (selectedMember.location !== raw) return;
+    let cancelled = false;
+    reverseGeocode(lat, lng).then(address => {
+      if (cancelled || address === raw) return;
+      setSelectedMember(prev => (prev && prev.id === selectedMember.id ? { ...prev, location: address } : prev));
+      setFamilyMembers(prev => prev.map(m => (m.id === selectedMember.id ? { ...m, location: address } : m)));
+    });
+    return () => { cancelled = true; };
+  }, [selectedMember?.id, selectedMember?.location]);
+
+  // Surface pending family alerts as a banner on every screen — if the
+  // recipient's app is open, realtime delivers it immediately even when push
+  // notifications can't be (e.g. iOS without "Add to Home Screen").
+  useEffect(() => {
+    publishFamilyAlertStore({
+      alerts: nav === "family" ? [] : pendingFamilyAlerts,
+      onOpen: (alert) => setPendingFamilyDeepLink(alert.from_user_id),
+      onDismiss: dismissFamilyAlert,
+    });
+  }, [pendingFamilyAlerts, nav]);
 
   const enableFamilyNotifications = async () => {
     setEnablingNotifications(true);
@@ -1769,10 +1830,25 @@ export default function MainApp({ session }) {
 // SHARED COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 function Shell({ children, shakeFlash }) {
+  const { alerts, onOpen, onDismiss } = useFamilyAlertStore();
   return (
     <div style={S.shell}>
       <style>{CSS}</style>
       {shakeFlash && <div style={S.shakeBanner}>📳 Shake phone 3× for silent SOS</div>}
+      {alerts.map((a, i) => (
+        <div key={a.id} style={{ ...S.familyAlertToast, top: 14 + i * 56 }}>
+          <button onClick={() => onOpen(a)} style={S.familyAlertToastBody}>
+            <span style={{ fontSize: 18 }}>{a.type === "panic" ? "🚨" : "🔔"}</span>
+            <span style={{ flex: 1, textAlign: "left" }}>
+              <b>{a.from_name || "A family member"}</b>{" "}
+              {a.type === "panic" ? "triggered a panic alert" : "is checking on you"}
+            </span>
+          </button>
+          <button onClick={() => onDismiss(a.id)} style={S.familyAlertToastDismiss}>
+            ✓ I'm OK
+          </button>
+        </div>
+      ))}
       {children}
     </div>
   );
@@ -3422,6 +3498,9 @@ const S = {
   countLoc: { color: "#FFB800", fontSize: 11, marginTop: 8, fontFamily: "monospace" },
   cancelBig: { marginTop: 28, background: "transparent", border: "1px solid #2a2a2a", color: "#666", borderRadius: 8, padding: "10px 30px", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 2 },
   shakeBanner: { position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", background: "#111", border: "1px solid #222", borderRadius: 20, padding: "7px 16px", fontSize: 11, color: "#aaa", zIndex: 50, whiteSpace: "nowrap", animation: "slideDown 0.3s ease" },
+  familyAlertToast: { position: "fixed", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 24px)", maxWidth: 406, background: "#0d0d0d", border: "1px solid #00BFFF44", borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, zIndex: 60, boxShadow: "0 4px 18px rgba(0,0,0,0.5)", animation: "slideDown 0.3s ease" },
+  familyAlertToastBody: { flex: 1, display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "#ccc", fontSize: 12, fontFamily: "'Barlow Condensed',sans-serif", cursor: "pointer", textAlign: "left", padding: 0 },
+  familyAlertToastDismiss: { flexShrink: 0, background: "#00FF8822", border: "1px solid #00FF8844", borderRadius: 6, padding: "6px 10px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" },
   stateCard: { width: "100%", background: "#0c0c0c", border: "1px solid #161616", borderRadius: 12, padding: "13px 14px", marginBottom: 7, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" },
   natBtn: { flex: 1, background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: "12px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer" },
   savedBanner: { margin: "12px 14px 0", width: "calc(100% - 28px)", background: "#00FF8808", border: "1px solid #00FF8820", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", textAlign: "left" },
