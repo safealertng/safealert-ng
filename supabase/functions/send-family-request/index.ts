@@ -2,12 +2,20 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
   try {
     const { toUserId, fromName, action } = await req.json();
 
     if (!toUserId) {
-      return new Response(JSON.stringify({ error: "Missing toUserId" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing toUserId" }), { status: 400, headers: corsHeaders });
     }
 
     webpush.setVapidDetails(
@@ -27,7 +35,7 @@ serve(async (req) => {
       .eq("user_id", toUserId);
 
     if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
+      return new Response(JSON.stringify({ sent: 0 }), { status: 200, headers: corsHeaders });
     }
 
     const name = fromName || "Someone";
@@ -51,9 +59,9 @@ serve(async (req) => {
     );
 
     const sent = results.filter((r) => r.status === "fulfilled").length;
-    return new Response(JSON.stringify({ sent }), { status: 200 });
+    return new Response(JSON.stringify({ sent }), { status: 200, headers: corsHeaders });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
   }
 });
