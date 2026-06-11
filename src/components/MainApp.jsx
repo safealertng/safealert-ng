@@ -64,19 +64,24 @@ async function reverseGeocode(lat, lng) {
 }
 
 // Tries a high-accuracy GPS fix first; on error or timeout, falls back to a
-// faster network/IP-based fix rather than giving up entirely.
+// faster network/IP-based fix rather than giving up entirely. Returns
+// { pos, permissionDenied } — pos is null if no fix could be obtained.
 function getLocationWithFallback() {
   return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return; }
+    if (!navigator.geolocation) { resolve({ pos: null, permissionDenied: false }); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve(pos),
+      (pos) => resolve({ pos, permissionDenied: false }),
       (err) => {
         console.error("GPS error (high accuracy):", err);
+        if (err.code === err.PERMISSION_DENIED) {
+          resolve({ pos: null, permissionDenied: true });
+          return;
+        }
         navigator.geolocation.getCurrentPosition(
-          (pos) => resolve(pos),
+          (pos) => resolve({ pos, permissionDenied: false }),
           (err2) => {
             console.error("GPS error (fallback):", err2);
-            resolve(null);
+            resolve({ pos: null, permissionDenied: err2.code === err2.PERMISSION_DENIED });
           },
           { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
         );
@@ -148,16 +153,24 @@ export default function MainApp({ session }) {
   const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
   const userAccuracyRef = useRef(null);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
   const mimeTypeRef = useRef("video/webm");
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    const profileLocation = session?.user?.user_metadata?.state || null;
+    if (!navigator.geolocation) {
+      setUserLocation(profileLocation || "Location unavailable");
+      return;
+    }
     let cancelled = false;
     (async () => {
-      const pos = await getLocationWithFallback();
+      const { pos, permissionDenied } = await getLocationWithFallback();
       if (cancelled) return;
+      if (permissionDenied) setLocationPermissionDenied(true);
       if (!pos) {
-        setUserLocation("Location unavailable");
+        const fallback = profileLocation || "Location unavailable";
+        setUserLocation(fallback);
+        userLocationRef.current = fallback;
         return;
       }
       const { latitude, longitude, accuracy } = pos.coords;
@@ -550,8 +563,10 @@ export default function MainApp({ session }) {
 
   const startBroadcast = async () => {
     try {
+      const profileLocation = session?.user?.user_metadata?.state || null;
       if (navigator.geolocation && (!userCoords || userLocation === "Locating..." || userLocation === "Location unavailable")) {
-        const pos = await getLocationWithFallback();
+        const { pos, permissionDenied } = await getLocationWithFallback();
+        if (permissionDenied) setLocationPermissionDenied(true);
         if (pos) {
           const { latitude, longitude, accuracy } = pos.coords;
           setUserCoords({ lat: latitude, lng: longitude });
@@ -560,9 +575,14 @@ export default function MainApp({ session }) {
           const loc = (await reverseGeocode(latitude, longitude)) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
           setUserLocation(loc);
           userLocationRef.current = loc;
+        } else if (profileLocation) {
+          setUserLocation(profileLocation);
+          userLocationRef.current = profileLocation;
         }
       }
-      const currentLocation = userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Unknown";
+      const currentLocation = userCoordsRef.current
+        ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}`
+        : (profileLocation || "Unknown");
       await supabase.from("panic_events").insert({
         user_id: session?.user?.id,
         lat: userCoords?.lat || 0,
@@ -602,7 +622,8 @@ export default function MainApp({ session }) {
     startCamera();
     recRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
     locationIntervalRef.current = setInterval(async () => {
-      const pos = await getLocationWithFallback();
+      const { pos, permissionDenied } = await getLocationWithFallback();
+      if (permissionDenied) setLocationPermissionDenied(true);
       if (!pos) return;
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
@@ -728,6 +749,9 @@ export default function MainApp({ session }) {
           <div style={S.countLabel}>SENDING EMERGENCY ALERT</div>
           <div style={S.countSub}>Police · Family · Emergency contacts</div>
           <div style={S.countLoc}>📍 {userLocation}</div>
+          {locationPermissionDenied && (
+            <div style={S.locWarn}>⚠️ Location access is off. Enable location permission for this site in your browser settings for accurate GPS.</div>
+          )}
           <button style={S.cancelBig} onClick={cancelPanic}>✕  CANCEL</button>
         </div>
       </div>
@@ -815,6 +839,9 @@ export default function MainApp({ session }) {
       <div style={{ padding: "12px 16px 0" }}>
         <MicroLabel>YOUR LOCATION</MicroLabel>
         <div style={S.locBox}>📍 <span style={{ flex: 1, color: "#ccc", fontSize: 13 }}>{userLocation}</span><span style={{ color: "#00FF88", fontSize: 10, fontWeight: 700 }}>LIVE</span></div>
+        {locationPermissionDenied && (
+          <div style={S.locWarn}>⚠️ Location access is off. Enable location permission for this site in your browser settings for accurate GPS.</div>
+        )}
       </div>
       <div style={{ padding: "12px 16px 0" }}>
         <MicroLabel>DESCRIPTION (OPTIONAL)</MicroLabel>
@@ -3049,6 +3076,7 @@ const S = {
   countLabel: { fontWeight: 900, fontSize: 16, letterSpacing: 3, color: "#fff", marginTop: 6 },
   countSub: { color: "#555", fontSize: 12, marginTop: 4 },
   countLoc: { color: "#FFB800", fontSize: 11, marginTop: 8, fontFamily: "monospace" },
+  locWarn: { background: "#FFB80010", border: "1px solid #FFB80033", borderRadius: 8, padding: "8px 10px", marginTop: 8, fontSize: 11, color: "#FFB800", lineHeight: 1.5, fontFamily: "'Barlow Condensed',sans-serif" },
   cancelBig: { marginTop: 28, background: "transparent", border: "1px solid #2a2a2a", color: "#666", borderRadius: 8, padding: "10px 30px", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, letterSpacing: 2 },
   shakeBanner: { position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", background: "#111", border: "1px solid #222", borderRadius: 20, padding: "7px 16px", fontSize: 11, color: "#aaa", zIndex: 50, whiteSpace: "nowrap", animation: "slideDown 0.3s ease" },
   stateCard: { width: "100%", background: "#0c0c0c", border: "1px solid #161616", borderRadius: 12, padding: "13px 14px", marginBottom: 7, display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left" },
