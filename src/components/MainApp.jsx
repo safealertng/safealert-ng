@@ -189,36 +189,11 @@ export default function MainApp({ session }) {
         .eq("status", "active")
         .single();
       if (!data) {
-        // Auto-enroll new user into Freemium plan
-        const { data: freemiumPlan } = await supabase
-          .from("subscription_plans")
-          .select("id")
-          .eq("name", "Freemium")
-          .single();
-        if (freemiumPlan) {
-          // Check if already enrolled to prevent duplicates
-          const { data: existing } = await supabase
-            .from("user_subscriptions")
-            .select("id")
-            .eq("user_id", session.user.id);
-          if (existing && existing.length > 0) return;
-          const endDate = new Date();
-          endDate.setDate(endDate.getDate() + 90);
-          await supabase.from("user_subscriptions").insert({
-            user_id: session.user.id,
-            plan_id: freemiumPlan.id,
-            status: "active",
-            start_date: new Date().toISOString(),
-            end_date: endDate.toISOString(),
-            amount_paid: 0,
-            is_complimentary: false,
-          });
-          setPlanExpired(false);
-          setUserPlan("freemium");
-        } else {
-          setPlanExpired(true);
-          setUserPlan("none");
-        }
+        // No subscription record yet — user hasn't gone through the
+        // subscription flow. Treat as Freemium without writing a row;
+        // SubscriptionPlans enrolls them when they actually visit that screen.
+        setPlanExpired(false);
+        setUserPlan("freemium");
       } else {
         const now = new Date();
         const end = new Date(data.end_date);
@@ -238,6 +213,19 @@ export default function MainApp({ session }) {
     };
     checkAdmin();
   }, [session]);
+
+  // Log a Daily Active User event for today (one row per user per day)
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const logActivity = async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      await supabase.from("user_activity").upsert(
+        { user_id: session.user.id, activity_date: today, last_seen_at: new Date().toISOString() },
+        { onConflict: "user_id,activity_date" }
+      );
+    };
+    logActivity();
+  }, [session?.user?.id]);
 
   useEffect(() => {
     const loadFamily = async () => {
@@ -3352,7 +3340,33 @@ function SubscriptionPlans({ session, onBack }) {
         .eq("user_id", session.user.id)
         .eq("status", "active")
         .single();
-      if (data) setCurrentPlan(data);
+      if (data) {
+        setCurrentPlan(data);
+        return;
+      }
+      // First time going through the subscription flow — enroll in Freemium
+      const { data: freemiumPlan } = await supabase
+        .from("subscription_plans")
+        .select("id")
+        .eq("name", "Freemium")
+        .single();
+      if (!freemiumPlan) return;
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 90);
+      const { data: created } = await supabase
+        .from("user_subscriptions")
+        .insert({
+          user_id: session.user.id,
+          plan_id: freemiumPlan.id,
+          status: "active",
+          start_date: new Date().toISOString(),
+          end_date: endDate.toISOString(),
+          amount_paid: 0,
+          is_complimentary: false,
+        })
+        .select("*, subscription_plans(*)")
+        .single();
+      if (created) setCurrentPlan(created);
     };
     fetchCurrentPlan();
   }, [session]);

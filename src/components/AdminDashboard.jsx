@@ -27,6 +27,7 @@ export default function AdminDashboard({ session, onBack }) {
   const [adminReply, setAdminReply] = useState("");
   const [subCounts, setSubCounts] = useState({ freemium: 0, basic: 0, premium: 0 });
   const [subscribers, setSubscribers] = useState([]);
+  const [dau, setDau] = useState(0);
 
   const showToast = (msg, color = "#00FF88") => {
     setToast({ msg, color });
@@ -55,7 +56,8 @@ export default function AdminDashboard({ session, onBack }) {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, supportRes, subsRes] = await Promise.all([
+    const today = new Date().toISOString().slice(0, 10);
+    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, supportRes, subsRes, dauRes] = await Promise.all([
       supabase.from("admin_users").select("*").order("created_at", { ascending: false }),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
@@ -65,10 +67,12 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("security_news").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
       supabase.rpc("get_subscribers_with_email"),
+      supabase.from("user_activity").select("*", { count: "exact", head: true }).eq("activity_date", today),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
     if (supportRes.data) setSupportTickets(supportRes.data);
+    setDau(dauRes.count || 0);
     const subData = subsRes.data || [];
       if (subData) {
       setSubscribers(subData);
@@ -202,6 +206,7 @@ export default function AdminDashboard({ session, onBack }) {
             <div style={A.grid2}>
               {[
                 ["👥", stats.users, "Total Users", "#4A90D9"],
+                ["📅", dau, "Daily Active Users", "#00D9FF"],
                 ["🚨", stats.incidents, "Total Incidents", "#FF2D2D"],
                 ["🆘", stats.panics, "Panic Events", "#FF6B00"],
                 ["⚡", stats.activeIncidents, "Active Incidents", "#FFB800"],
