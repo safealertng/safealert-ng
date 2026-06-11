@@ -533,8 +533,24 @@ export default function MainApp({ session }) {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.id) { fetchFamily(); fetchPendingFamilyRequests(); }
-  }, [session]);
+    const uid = session?.user?.id;
+    if (!uid) return;
+    fetchFamily();
+    fetchPendingFamilyRequests();
+    const channel = supabase
+      .channel(`family-${uid}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "family_requests", filter: `to_user_id=eq.${uid}` },
+        () => fetchPendingFamilyRequests()
+      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "family_requests", filter: `from_user_id=eq.${uid}` },
+        () => { fetchFamily(); fetchPendingFamilyRequests(); }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "family_members", filter: `owner_id=eq.${uid}` },
+        () => fetchFamily()
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (videoSaved) {
