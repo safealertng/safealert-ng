@@ -36,6 +36,11 @@ serve(async (req) => {
           title: "SafeAlert NG",
           body: `${name} accepted your family request — you're now connected on Family Tracker.`,
         })
+      : action === "checkin"
+      ? JSON.stringify({
+          title: "SafeAlert NG",
+          body: `${name} is checking on you — please respond.`,
+        })
       : JSON.stringify({
           title: "SafeAlert NG",
           body: `${name} wants to add you as family on SafeAlertNG.`,

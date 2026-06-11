@@ -114,6 +114,9 @@ export default function MainApp({ session }) {
   const [pendingFamilyRequests, setPendingFamilyRequests] = useState([]);
   const [sendingRequestTo, setSendingRequestTo] = useState(null);
   const [respondingRequestId, setRespondingRequestId] = useState(null);
+  const [familyPushStatus, setFamilyPushStatus] = useState(new Set());
+  const [sendingCheckInTo, setSendingCheckInTo] = useState(null);
+  const [checkInMsg, setCheckInMsg] = useState(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -270,12 +273,22 @@ export default function MainApp({ session }) {
       return city && state ? `${city}, ${state}` : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     } catch { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
   };
+  const fetchFamilyPushStatus = async (members) => {
+    const memberIds = [...new Set((members || []).filter(m => m.member_user_id).map(m => m.member_user_id))];
+    if (memberIds.length === 0) { setFamilyPushStatus(new Set()); return; }
+    const { data, error } = await supabase.from('push_subscriptions').select('user_id').in('user_id', memberIds);
+    if (!error) setFamilyPushStatus(new Set((data || []).map(s => s.user_id)));
+  };
+
   const fetchFamily = async () => {
     const { data, error } = await supabase
       .from("family_members")
       .select('id, nickname, relation, phone, member_user_id, last_lat, last_lng, last_seen')
       .eq("owner_id", session?.user?.id);
-    if (!error && data) setFamilyMembers(data);
+    if (!error && data) {
+      setFamilyMembers(data);
+      fetchFamilyPushStatus(data);
+    }
   };
 
   const deleteFamilyMember = async (id) => {
@@ -359,6 +372,36 @@ export default function MainApp({ session }) {
         });
       } catch (e) { console.error("Family accept notification error:", e); }
     }
+  };
+
+  const sendCheckInAlert = async (member) => {
+    if (!member.member_user_id) return;
+    setSendingCheckInTo(member.id);
+    setCheckInMsg(null);
+    try {
+      const res = await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+          "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
+        },
+        body: JSON.stringify({
+          toUserId: member.member_user_id,
+          fromName: session?.user?.user_metadata?.full_name || "A family member",
+          action: "checkin",
+        }),
+      });
+      const data = await res.json();
+      if (data?.sent > 0) {
+        setCheckInMsg({ type: "ok", text: `Alert sent to ${member.nickname}.` });
+      } else {
+        setCheckInMsg({ type: "error", text: `${member.nickname} hasn't enabled notifications yet.` });
+      }
+    } catch (e) {
+      setCheckInMsg({ type: "error", text: "Failed to send alert. Try again." });
+    }
+    setSendingCheckInTo(null);
   };
 
   const startVoiceRecording = async () => {
@@ -1015,6 +1058,11 @@ export default function MainApp({ session }) {
                 📱 App Connected
               </div>
             )}
+            {selectedMember.member_user_id && !familyPushStatus.has(selectedMember.member_user_id) && (
+              <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 8, background: "#FF6B0018", border: "1px solid #FF6B0044", color: "#FF6B00", fontSize: 11, fontWeight: 700, textAlign: "left" }}>
+                ⚠️ Family member has not enabled notifications - ask them to open the app and allow notifications
+              </div>
+            )}
           </div>
           <div style={{ ...S.card, marginTop: 10 }}>
             {[["📍 GPS", selectedMember.last_lat && selectedMember.last_lng ? `${Number(selectedMember.last_lat).toFixed(6)}, ${Number(selectedMember.last_lng).toFixed(6)}` : "Not available"], ["📍 Location", selectedMember.location], ["🕐 Last Seen", selectedMember.lastSeen], ["🔋 Battery", selectedMember.battery + "%", selectedMember.battery < 20 ? "#FF6B00" : "#00FF88"]].map(([l, v, c]) => (
@@ -1024,18 +1072,26 @@ export default function MainApp({ session }) {
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
             {selectedMember.phone && (
               <>
                 <button style={{ ...S.redBtn, flex: 1, fontSize: 12 }} onClick={() => window.open(`tel:${selectedMember.phone}`)}>📞 Call Now</button>
                 <button onClick={() => {
                   const msg = `🚨 SAFEALERT NG — FAMILY SAFETY CHECK\n\nHi ${selectedMember.nickname}, your family member is checking on your safety.\n\nPlease reply to confirm you are safe. 🛡️\n\nSent via SafeAlert NG`;
                   window.open(`https://wa.me/${selectedMember.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`);
-                }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#25D36622", boxShadow: "none", color: "#25D366", border: "1px solid #25D36644" }}>💬 Send Alert</button>
+                }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#25D36622", boxShadow: "none", color: "#25D366", border: "1px solid #25D36644" }}>💬 WhatsApp</button>
               </>
+            )}
+            {selectedMember.member_user_id && (
+              <button onClick={() => sendCheckInAlert(selectedMember)} disabled={sendingCheckInTo === selectedMember.id} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#00BFFF22", boxShadow: "none", color: "#00BFFF", border: "1px solid #00BFFF44", opacity: sendingCheckInTo === selectedMember.id ? 0.6 : 1 }}>
+                {sendingCheckInTo === selectedMember.id ? "Sending…" : "📨 Send Alert"}
+              </button>
             )}
             <button onClick={() => { deleteFamilyMember(selectedMember.id); setSelectedMember(null); }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#1a1a1a", boxShadow: "none", color: "#FF2D2D", border: "1px solid #FF2D2D33" }}>🗑️ Remove</button>
           </div>
+          {checkInMsg && (
+            <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, textAlign: "center", color: checkInMsg.type === "error" ? "#FF2D2D" : "#00FF88" }}>{checkInMsg.text}</div>
+          )}
         </div>
       ) : (
         <div style={{ padding: "12px 16px" }}>
@@ -1050,6 +1106,9 @@ export default function MainApp({ session }) {
                 <div style={{ fontWeight: 800, fontSize: 14 }}>{m.name}</div>
                 <div style={{ color: "#555", fontSize: 11 }}>{m.relation} · {m.location}</div>
                 <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>Last seen {m.lastSeen}</div>
+                {m.member_user_id && !familyPushStatus.has(m.member_user_id) && (
+                  <div style={{ color: "#FF6B00", fontSize: 10, marginTop: 2, fontWeight: 700 }}>🔕 Notifications off</div>
+                )}
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: m.status === "alert" ? "#FF2D2D" : "#00FF88" }}>{m.status === "alert" ? "⚠️ ALERT" : "✓ SAFE"}</div>
