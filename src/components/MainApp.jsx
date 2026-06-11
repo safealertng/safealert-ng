@@ -118,9 +118,7 @@ export default function MainApp({ session }) {
   const [familyPushStatus, setFamilyPushStatus] = useState(new Set());
   const [sendingCheckInTo, setSendingCheckInTo] = useState(null);
   const [checkInMsg, setCheckInMsg] = useState(null);
-  const [notificationPermission, setNotificationPermission] = useState(
-    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
-  );
+  const [hasOwnPushSubscription, setHasOwnPushSubscription] = useState(true);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
 
   useEffect(() => {
@@ -283,6 +281,13 @@ export default function MainApp({ session }) {
     if (memberIds.length === 0) { setFamilyPushStatus(new Set()); return; }
     const { data, error } = await supabase.from('push_subscriptions').select('user_id').in('user_id', memberIds);
     if (!error) setFamilyPushStatus(new Set((data || []).map(s => s.user_id)));
+  };
+
+  const checkOwnPushSubscription = async () => {
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const { data, error } = await supabase.from('push_subscriptions').select('user_id').eq('user_id', uid).limit(1);
+    if (!error) setHasOwnPushSubscription((data || []).length > 0);
   };
 
   const fetchFamily = async () => {
@@ -578,6 +583,7 @@ export default function MainApp({ session }) {
     if (!uid) return;
     fetchFamily();
     fetchPendingFamilyRequests();
+    checkOwnPushSubscription();
     const channel = supabase
       .channel(`family-${uid}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "family_requests", filter: `to_user_id=eq.${uid}` },
@@ -604,8 +610,8 @@ export default function MainApp({ session }) {
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       await Notification.requestPermission();
     }
-    const result = await setupPushNotifications();
-    setNotificationPermission(result);
+    await setupPushNotifications();
+    await checkOwnPushSubscription();
     setEnablingNotifications(false);
   };
 
@@ -1005,7 +1011,7 @@ export default function MainApp({ session }) {
   if (nav === "family") return (
     <Shell shakeFlash={false}>
       <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
-      {notificationPermission !== "granted" && notificationPermission !== "unsupported" && (
+      {!hasOwnPushSubscription && (
         <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ display: "block", width: "calc(100% - 32px)", margin: "12px 16px 0", background: "linear-gradient(135deg,#FF6B00,#CC5500)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: 0.5, opacity: enablingNotifications ? 0.7 : 1 }}>
           {enablingNotifications ? "Enabling…" : "🔔 Tap here to enable family alerts"}
         </button>
