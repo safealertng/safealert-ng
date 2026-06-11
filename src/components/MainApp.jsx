@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "../lib/supabase";
+import { setupPushNotifications } from "../lib/push";
 import AgoraRTC, { APP_ID } from "../lib/agora";
 import AdminDashboard from "./AdminDashboard";
 import useShakeToSOS from "../hooks/useShakeToSOS";
@@ -117,6 +118,11 @@ export default function MainApp({ session }) {
   const [familyPushStatus, setFamilyPushStatus] = useState(new Set());
   const [sendingCheckInTo, setSendingCheckInTo] = useState(null);
   const [checkInMsg, setCheckInMsg] = useState(null);
+  const [notificationPermission, setNotificationPermission] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
+  );
+  const [enablingNotifications, setEnablingNotifications] = useState(false);
+  const familyPushPromptedRef = useRef(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -592,6 +598,20 @@ export default function MainApp({ session }) {
   }, [session?.user?.id]);
 
   useEffect(() => {
+    if (nav !== "family" || familyPushPromptedRef.current) return;
+    if (typeof Notification === "undefined" || Notification.permission !== "default") return;
+    familyPushPromptedRef.current = true;
+    setupPushNotifications().then(result => setNotificationPermission(result));
+  }, [nav]);
+
+  const enableFamilyNotifications = async () => {
+    setEnablingNotifications(true);
+    const result = await setupPushNotifications();
+    setNotificationPermission(result);
+    setEnablingNotifications(false);
+  };
+
+  useEffect(() => {
     if (videoSaved) {
       setPanicStage("idle"); setPanicCount(5);
       setRecordTime(0); setUploadPct(0); setDispatched(false);
@@ -987,6 +1007,16 @@ export default function MainApp({ session }) {
   if (nav === "family") return (
     <Shell shakeFlash={false}>
       <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
+      {notificationPermission !== "granted" && notificationPermission !== "unsupported" && (
+        <div style={{ margin: "12px 16px 0", background: "#FF6B0018", border: "1px solid #FF6B0044", borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 180, color: "#FF6B00", fontSize: 12, fontWeight: 700 }}>
+            🔔 Enable notifications to receive alerts from your family members
+          </div>
+          <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ flexShrink: 0, background: "#FF6B0022", border: "1px solid #FF6B0044", borderRadius: 8, padding: "9px 14px", color: "#FF6B00", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>
+            {enablingNotifications ? "Enabling…" : "Enable Notifications"}
+          </button>
+        </div>
+      )}
       {addingMember && (
         <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#444", marginBottom: 10, fontFamily: "monospace" }}>FIND FAMILY ON SAFEALERTNG</div>
