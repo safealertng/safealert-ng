@@ -122,7 +122,6 @@ export default function MainApp({ session }) {
     typeof Notification !== "undefined" ? Notification.permission : "unsupported"
   );
   const [enablingNotifications, setEnablingNotifications] = useState(false);
-  const familyPushPromptedRef = useRef(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -597,15 +596,14 @@ export default function MainApp({ session }) {
     return () => supabase.removeChannel(channel);
   }, [session?.user?.id]);
 
-  useEffect(() => {
-    if (nav !== "family" || familyPushPromptedRef.current) return;
-    if (typeof Notification === "undefined" || Notification.permission !== "default") return;
-    familyPushPromptedRef.current = true;
-    setupPushNotifications().then(result => setNotificationPermission(result));
-  }, [nav]);
-
   const enableFamilyNotifications = async () => {
     setEnablingNotifications(true);
+    // Request permission directly inside this tap handler first — on iOS
+    // Safari, requestPermission() must run with a live user-gesture context,
+    // which is lost if any awaits (e.g. service worker registration) happen first.
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
     const result = await setupPushNotifications();
     setNotificationPermission(result);
     setEnablingNotifications(false);
@@ -1008,14 +1006,9 @@ export default function MainApp({ session }) {
     <Shell shakeFlash={false}>
       <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
       {notificationPermission !== "granted" && notificationPermission !== "unsupported" && (
-        <div style={{ margin: "12px 16px 0", background: "#FF6B0018", border: "1px solid #FF6B0044", borderRadius: 12, padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 180, color: "#FF6B00", fontSize: 12, fontWeight: 700 }}>
-            🔔 Enable notifications to receive alerts from your family members
-          </div>
-          <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ flexShrink: 0, background: "#FF6B0022", border: "1px solid #FF6B0044", borderRadius: 8, padding: "9px 14px", color: "#FF6B00", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>
-            {enablingNotifications ? "Enabling…" : "Enable Notifications"}
-          </button>
-        </div>
+        <button onClick={enableFamilyNotifications} disabled={enablingNotifications} style={{ display: "block", width: "calc(100% - 32px)", margin: "12px 16px 0", background: "linear-gradient(135deg,#FF6B00,#CC5500)", border: "none", borderRadius: 12, padding: "16px", color: "#fff", fontSize: 14, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif", letterSpacing: 0.5, opacity: enablingNotifications ? 0.7 : 1 }}>
+          {enablingNotifications ? "Enabling…" : "🔔 Tap here to enable family alerts"}
+        </button>
       )}
       {addingMember && (
         <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 12, padding: 14 }}>
