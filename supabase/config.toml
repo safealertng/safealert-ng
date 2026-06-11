@@ -31,3 +31,15 @@ entrypoint = "./functions/send-shake-sos/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/send-shake-sos/*.html" ]
+
+[functions.send-family-request]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-family-request/deno.json"
+entrypoint = "./functions/send-family-request/index.ts"
+
+[functions.send-family-panic-alert]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-family-panic-alert/deno.json"
+entrypoint = "./functions/send-family-panic-alert/index.ts"

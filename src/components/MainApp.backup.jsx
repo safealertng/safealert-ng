@@ -107,13 +107,6 @@ export default function MainApp({ session }) {
   const mimeTypeRef = useRef("video/webm");
   const shakeSOS = useShakeToSOS(session);
   const [shakeStatusMsg, setShakeStatusMsg] = useState(null);
-  const [familySearchQuery, setFamilySearchQuery] = useState("");
-  const [familySearchResults, setFamilySearchResults] = useState([]);
-  const [familySearching, setFamilySearching] = useState(false);
-  const [familySearchMsg, setFamilySearchMsg] = useState(null);
-  const [pendingFamilyRequests, setPendingFamilyRequests] = useState([]);
-  const [sendingRequestTo, setSendingRequestTo] = useState(null);
-  const [respondingRequestId, setRespondingRequestId] = useState(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -243,7 +236,7 @@ export default function MainApp({ session }) {
       if (!session?.user?.id) return;
       const { data, error } = await supabase
         .from('family_members')
-        .select('id, nickname, relation, phone, member_user_id, last_lat, last_lng, last_seen')
+        .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
         .eq('owner_id', session.user.id);
       if (error) { console.error('Family fetch error:', error.message); return; }
       console.log('Family members loaded:', data);
@@ -252,7 +245,7 @@ export default function MainApp({ session }) {
           const address = await reverseGeocode(m.last_lat, m.last_lng);
           return { ...m, location: address };
         }
-        return { ...m, location: m.member_user_id ? "📱 App Connected" : (m.phone || "No location yet") };
+        return { ...m, location: m.phone };
       }));
       setFamilyMembers(enriched);
     };
@@ -280,92 +273,34 @@ export default function MainApp({ session }) {
   const fetchFamily = async () => {
     const { data, error } = await supabase
       .from("family_members")
-      .select('id, nickname, relation, phone, member_user_id, last_lat, last_lng, last_seen')
+      .select('id, nickname, relation, phone, last_lat, last_lng, last_seen')
       .eq("owner_id", session?.user?.id);
     if (!error && data) setFamilyMembers(data);
+  };
+
+  const addFamilyMember = async () => {
+    if (!newName || !newPhone || !newRelation) return;
+    const { error } = await supabase
+      .from("family_members")
+      .insert({
+        owner_id: session?.user?.id,
+        nickname: newName,
+        phone: newPhone,
+        relation: newRelation,
+      });
+    if (!error) {
+      setNewName(""); setNewPhone(""); setNewRelation("");
+      setAddingMember(false);
+      const { data } = await supabase.from('family_members').select('id, nickname, relation, phone, last_lat, last_lng, last_seen').eq('owner_id', session?.user?.id);
+      setFamilyMembers(data ?? []);
+    } else {
+      alert("Error adding member: " + error.message);
+    }
   };
 
   const deleteFamilyMember = async (id) => {
     await supabase.from("family_members").delete().eq("id", id);
     setFamilyMembers(prev => prev.filter(m => m.id !== id));
-  };
-
-  const fetchPendingFamilyRequests = async () => {
-    const { data, error } = await supabase.rpc("get_pending_family_requests");
-    if (!error && data) setPendingFamilyRequests(data);
-  };
-
-  const searchFamilyUsers = async () => {
-    const q = familySearchQuery.trim();
-    if (q.length < 2) {
-      setFamilySearchMsg({ type: "error", text: "Type at least 2 characters." });
-      setFamilySearchResults([]);
-      return;
-    }
-    setFamilySearching(true);
-    setFamilySearchMsg(null);
-    const { data, error } = await supabase.rpc("search_safealert_users", { p_query: q });
-    setFamilySearching(false);
-    if (error) {
-      setFamilySearchMsg({ type: "error", text: error.message });
-      setFamilySearchResults([]);
-      return;
-    }
-    setFamilySearchResults(data ?? []);
-    if (!data || data.length === 0) setFamilySearchMsg({ type: "error", text: "No SafeAlertNG users found." });
-  };
-
-  const sendFamilyRequest = async (user) => {
-    setSendingRequestTo(user.id);
-    const { error } = await supabase.rpc("send_family_request", { p_to_user_id: user.id });
-    setSendingRequestTo(null);
-    if (error) {
-      setFamilySearchMsg({ type: "error", text: error.message });
-      return;
-    }
-    setFamilySearchResults(prev => prev.map(u => u.id === user.id ? { ...u, connection_status: "pending_sent" } : u));
-    setFamilySearchMsg({ type: "ok", text: `Family request sent to ${user.full_name || user.email}.` });
-    try {
-      await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-          "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-        },
-        body: JSON.stringify({
-          toUserId: user.id,
-          fromName: session?.user?.user_metadata?.full_name || "A SafeAlertNG user",
-          action: "request",
-        }),
-      });
-    } catch (e) { console.error("Family request notification error:", e); }
-  };
-
-  const respondFamilyRequest = async (request, accept) => {
-    setRespondingRequestId(request.id);
-    const { error } = await supabase.rpc("respond_family_request", { p_request_id: request.id, p_accept: accept });
-    setRespondingRequestId(null);
-    if (error) { alert("Error: " + error.message); return; }
-    setPendingFamilyRequests(prev => prev.filter(r => r.id !== request.id));
-    if (accept) {
-      await fetchFamily();
-      try {
-        await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-request", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-            "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-          },
-          body: JSON.stringify({
-            toUserId: request.from_user_id,
-            fromName: session?.user?.user_metadata?.full_name || "A SafeAlertNG user",
-            action: "accepted",
-          }),
-        });
-      } catch (e) { console.error("Family accept notification error:", e); }
-    }
   };
 
   const startVoiceRecording = async () => {
@@ -502,6 +437,9 @@ export default function MainApp({ session }) {
   const [recordedChunks, setRecordedChunks] = useState([]);
   const [facingMode, setFacingMode] = useState("user"); const [videoSaved, setVideoSaved] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newRelation, setNewRelation] = useState("");
   const [reportStage, setReportStage] = useState("form");
   const [selectedMember, setSelectedMember] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
@@ -533,7 +471,7 @@ export default function MainApp({ session }) {
   }, []);
 
   useEffect(() => {
-    if (session?.user?.id) { fetchFamily(); fetchPendingFamilyRequests(); }
+    if (session?.user?.id) fetchFamily();
   }, [session]);
 
   useEffect(() => {
@@ -626,24 +564,6 @@ export default function MainApp({ session }) {
         body: JSON.stringify({ userLocation }),
       });
     } catch (e) { console.error("Push to all devices error:", e); }
-    // Notify app-connected family members directly via Family Tracker
-    try {
-      await fetch("https://smrbhjfpybeqkiuutmpw.supabase.co/functions/v1/send-family-panic-alert", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-          "apikey": "sb_publishable_Z4YTEeowPoSRkE2IRs9Dpg_339r_Vnr",
-        },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          userName: session?.user?.user_metadata?.full_name,
-          lat: userCoordsRef.current?.lat,
-          lng: userCoordsRef.current?.lng,
-          location: userLocationRef.current,
-        }),
-      });
-    } catch (e) { console.error("Family panic alert error:", e); }
     // Auto-send WhatsApp alerts to all family members
     familyMembers.forEach(m => {
     });
@@ -788,7 +708,7 @@ export default function MainApp({ session }) {
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
       <Section label="FAMILY MEMBERS ALERTED">
-        {familyMembers.map(m => <RespRow key={m.id} icon={"👤"} title={m.nickname} sub={m.member_user_id ? "📱 App Connected" : (m.phone || "—")} ok={dispatched} />)}
+        {familyMembers.map(m => <RespRow key={m.id} icon={"👤"} title={m.nickname} sub={m.phone} ok={dispatched} />)}
       </Section>
       <Section label="EMERGENCY SERVICES">
         {[{ icon: "🚔", name: "Nigeria Police Force", num: "199" }, { icon: "🛡️", name: "DSS Emergency", num: "08039003044" }, { icon: "⚔️", name: "NSCDC", num: "112" }].map(e =>
@@ -934,58 +854,14 @@ export default function MainApp({ session }) {
       <TopBar title="FAMILY TRACKER" onBack={() => { setNav("home"); setSelectedMember(null); setAddingMember(false); }} />
       {addingMember && (
         <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#444", marginBottom: 10, fontFamily: "monospace" }}>FIND FAMILY ON SAFEALERTNG</div>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#444", marginBottom: 10, fontFamily: "monospace" }}>ADD FAMILY MEMBER</div>
+          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Full name" style={{ width: "100%", background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 8 }} />
+          <input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="Phone number e.g. 08012345678" style={{ width: "100%", background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 8 }} />
+          <input value={newRelation} onChange={e => setNewRelation(e.target.value)} placeholder="Relation e.g. Mother, Brother" style={{ width: "100%", background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "'Barlow Condensed',sans-serif", marginBottom: 8 }} />
           <div style={{ display: "flex", gap: 8 }}>
-            <input
-              value={familySearchQuery}
-              onChange={e => setFamilySearchQuery(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") searchFamilyUsers(); }}
-              placeholder="Search by email or name"
-              style={{ flex: 1, background: "#111", border: "1px solid #1e1e1e", borderRadius: 8, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "'Barlow Condensed',sans-serif" }}
-            />
-            <button onClick={searchFamilyUsers} disabled={familySearching} style={{ background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 8, padding: "0 18px", color: "#fff", fontSize: 16, fontWeight: 900, cursor: "pointer", opacity: familySearching ? 0.5 : 1 }}>
-              {familySearching ? "…" : "🔍"}
-            </button>
+            <button onClick={addFamilyMember} style={{ flex: 1, background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 8, padding: "11px", color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>ADD MEMBER</button>
+            <button onClick={() => setAddingMember(false)} style={{ flex: 1, background: "#111", border: "1px solid #222", borderRadius: 8, padding: "11px", color: "#555", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>CANCEL</button>
           </div>
-          {familySearchMsg && (
-            <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: familySearchMsg.type === "error" ? "#FF2D2D" : "#00FF88" }}>{familySearchMsg.text}</div>
-          )}
-          {familySearchResults.map(u => (
-            <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, background: "#111", borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>👤</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 13 }}>{u.full_name || "SafeAlertNG User"}</div>
-                <div style={{ color: "#555", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}{u.state ? ` · ${u.state}` : ""}</div>
-              </div>
-              {u.connection_status === "connected" ? (
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#00FF88", flexShrink: 0 }}>✓ Connected</span>
-              ) : u.connection_status === "pending_sent" ? (
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#FF6B00", flexShrink: 0 }}>Request sent</span>
-              ) : u.connection_status === "pending_received" ? (
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#00BFFF", flexShrink: 0 }}>See requests below</span>
-              ) : (
-                <button onClick={() => sendFamilyRequest(u)} disabled={sendingRequestTo === u.id} style={{ flexShrink: 0, background: "#00FF8822", border: "1px solid #00FF8844", borderRadius: 6, padding: "7px 12px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>
-                  {sendingRequestTo === u.id ? "Sending…" : "+ Add"}
-                </button>
-              )}
-            </div>
-          ))}
-          <button onClick={() => { setAddingMember(false); setFamilySearchQuery(""); setFamilySearchResults([]); setFamilySearchMsg(null); }} style={{ marginTop: 10, width: "100%", background: "#111", border: "1px solid #222", borderRadius: 8, padding: "11px", color: "#555", fontSize: 13, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>CLOSE</button>
-        </div>
-      )}
-      {pendingFamilyRequests.length > 0 && (
-        <div style={{ margin: "12px 16px", background: "#0d0d0d", border: "1px solid #FFB80044", borderRadius: 12, padding: 14 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: "#FFB800", marginBottom: 10, fontFamily: "monospace" }}>FAMILY REQUESTS</div>
-          {pendingFamilyRequests.map(r => (
-            <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #161616" }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>👤</div>
-              <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#ccc" }}>
-                <span style={{ fontWeight: 800 }}>{r.from_name || "A SafeAlertNG user"}</span> wants to add you as family
-              </div>
-              <button onClick={() => respondFamilyRequest(r, true)} disabled={respondingRequestId === r.id} style={{ flexShrink: 0, background: "#00FF8822", border: "1px solid #00FF8844", borderRadius: 6, padding: "6px 10px", color: "#00FF88", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>Accept</button>
-              <button onClick={() => respondFamilyRequest(r, false)} disabled={respondingRequestId === r.id} style={{ flexShrink: 0, marginLeft: 6, background: "#1a1a1a", border: "1px solid #FF2D2D33", borderRadius: 6, padding: "6px 10px", color: "#FF2D2D", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>Decline</button>
-            </div>
-          ))}
         </div>
       )}
       {selectedMember ? (
@@ -998,11 +874,6 @@ export default function MainApp({ session }) {
             <div style={{ display: "inline-block", marginTop: 10, padding: "3px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1, background: selectedMember.status === "alert" ? "#FF2D2D18" : "#00FF8818", color: selectedMember.status === "alert" ? "#FF2D2D" : "#00FF88", border: `1px solid ${selectedMember.status === "alert" ? "#FF2D2D44" : "#00FF8844"}` }}>
               {selectedMember.status === "alert" ? "⚠️ ON ALERT" : "✓ SAFE"}
             </div>
-            {selectedMember.member_user_id && (
-              <div style={{ display: "inline-block", marginTop: 10, marginLeft: 6, padding: "3px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1, background: "#00BFFF18", color: "#00BFFF", border: "1px solid #00BFFF44" }}>
-                📱 App Connected
-              </div>
-            )}
           </div>
           <div style={{ ...S.card, marginTop: 10 }}>
             {[["📍 GPS", selectedMember.last_lat && selectedMember.last_lng ? `${Number(selectedMember.last_lat).toFixed(6)}, ${Number(selectedMember.last_lng).toFixed(6)}` : "Not available"], ["📍 Location", selectedMember.location], ["🕐 Last Seen", selectedMember.lastSeen], ["🔋 Battery", selectedMember.battery + "%", selectedMember.battery < 20 ? "#FF6B00" : "#00FF88"]].map(([l, v, c]) => (
@@ -1013,22 +884,18 @@ export default function MainApp({ session }) {
             ))}
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-            {selectedMember.phone && (
-              <>
-                <button style={{ ...S.redBtn, flex: 1, fontSize: 12 }} onClick={() => window.open(`tel:${selectedMember.phone}`)}>📞 Call Now</button>
-                <button onClick={() => {
-                  const msg = `🚨 SAFEALERT NG — FAMILY SAFETY CHECK\n\nHi ${selectedMember.nickname}, your family member is checking on your safety.\n\nPlease reply to confirm you are safe. 🛡️\n\nSent via SafeAlert NG`;
-                  window.open(`https://wa.me/${selectedMember.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`);
-                }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#25D36622", boxShadow: "none", color: "#25D366", border: "1px solid #25D36644" }}>💬 Send Alert</button>
-              </>
-            )}
+            <button style={{ ...S.redBtn, flex: 1, fontSize: 12 }} onClick={() => window.open(`tel:${selectedMember.phone}`)}>📞 Call Now</button>
+            <button onClick={() => {
+              const msg = `🚨 SAFEALERT NG — FAMILY SAFETY CHECK\n\nHi ${selectedMember.nickname}, your family member is checking on your safety.\n\nPlease reply to confirm you are safe. 🛡️\n\nSent via SafeAlert NG`;
+              window.open(`https://wa.me/${selectedMember.phone?.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`);
+            }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#25D36622", boxShadow: "none", color: "#25D366", border: "1px solid #25D36644" }}>💬 Send Alert</button>
             <button onClick={() => { deleteFamilyMember(selectedMember.id); setSelectedMember(null); }} style={{ ...S.redBtn, flex: 1, fontSize: 12, background: "#1a1a1a", boxShadow: "none", color: "#FF2D2D", border: "1px solid #FF2D2D33" }}>🗑️ Remove</button>
           </div>
         </div>
       ) : (
         <div style={{ padding: "12px 16px" }}>
           <MicroLabel>LIVE FAMILY LOCATIONS</MicroLabel>
-          {familyMembers.map(m => ({ ...m, avatar: "👤", status: "safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : "Not yet", battery: 100, location: m.location || (m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : (m.member_user_id ? "📱 App Connected" : (m.phone || "No location yet"))), name: m.nickname, hasGps: !!(m.last_lat && m.last_lng) })).map(m => (
+          {familyMembers.map(m => ({ ...m, avatar: "👤", status: "safe", lastSeen: m.last_seen ? new Date(m.last_seen).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" }) : "Not yet", battery: 100, location: m.location || (m.last_lat && m.last_lng ? `${m.last_lat.toFixed(4)}, ${m.last_lng.toFixed(4)}` : m.phone), name: m.nickname, hasGps: !!(m.last_lat && m.last_lng) })).map(m => (
             <button key={m.id} onClick={() => setSelectedMember(m)} style={S.memberCard}>
               <div style={{ position: "relative" }}>
                 <span style={{ fontSize: 32 }}>{m.avatar}</span>
