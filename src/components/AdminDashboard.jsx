@@ -144,6 +144,14 @@ export default function AdminDashboard({ session, onBack }) {
     showToast("Role removed", "#FF2D2D");
   };
 
+  const deleteBetaTester = async (id) => {
+    if (!window.confirm("Delete this beta tester signup?")) return;
+    const { error } = await supabase.rpc("delete_beta_tester", { p_id: id });
+    if (error) { showToast(error.message, "#FF2D2D"); return; }
+    setBetaTesters(prev => prev.filter(b => b.id !== id));
+    showToast("Beta tester removed", "#FF2D2D");
+  };
+
   if (checking) return (
     <div style={A.center}>
       <div style={A.spinner} />
@@ -546,6 +554,9 @@ const fileName = pathParts[1] || inc.video_url.split("/").pop();
                   <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>{b.email}</div>
                   <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>📍 {b.state} · Joined: {new Date(b.created_at).toLocaleDateString("en-NG")}</div>
                 </div>
+                {adminRole === "super_admin" && (
+                  <button onClick={() => deleteBetaTester(b.id)} style={{ ...A.smBtn, color: "#FF2D2D", borderColor: "#FF2D2D44" }}>🗑 Delete</button>
+                )}
               </div>
             ))}
           </div>
