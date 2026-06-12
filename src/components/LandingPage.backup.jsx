@@ -24,24 +24,6 @@ const SLIDES = [
   { icon: "📰", color: "#00FF88", title: "SECURITY NEWS", subtitle: "Latest from trusted Nigerian sources", tag: "CHANNELS TV · PUNCH · VANGUARD", body: "Real-time security news from Channels TV, Punch, Vanguard, Premium Times and more — all in one feed, updated live." },
 ];
 
-function AnimatedCounter({ value, suffix = "", duration = 1600 }) {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    let frame;
-    const start = performance.now();
-    const tick = (now) => {
-      const progress = Math.min((now - start) / duration, 1);
-      setCount(Math.floor(progress * value));
-      if (progress < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [value, duration]);
-
-  return <>{count.toLocaleString("en-NG")}{suffix}</>;
-}
-
 export default function LandingPage({ onGetStarted }) {
   const [screen, setScreen] = useState("landing"); // "landing" | "slides" | "newsletter"
   const [slideIndex, setSlideIndex] = useState(0);
@@ -153,32 +135,13 @@ export default function LandingPage({ onGetStarted }) {
     @keyframes fadeIn { from{opacity:0} to{opacity:1} }
     @keyframes spin { to{transform:rotate(360deg)} }
     @keyframes glow { 0%,100%{box-shadow:0 0 20px #00660033} 50%{box-shadow:0 0 40px #00880055} }
-    @keyframes glowRed { 0%,100%{box-shadow:0 0 24px #FF2D2D33} 50%{box-shadow:0 0 56px #FF2D2D77} }
-
-    .feature-card { transition: all 0.25s ease; }
-    .feature-card:hover { transform: translateY(-6px); box-shadow: 0 0 40px var(--glow, #00FF8844); }
-    .feature-card .feature-icon { transition: transform 0.25s ease; }
-    .feature-card:hover .feature-icon { transform: scale(1.15) rotate(-4deg); }
-
-    .stat-card { transition: all 0.25s ease; }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 0 30px var(--glow, #00FF8833); }
-
-    .plan-card { transition: all 0.25s ease; }
+    .feature-card:hover { border-color: #FF2D2D55 !important; transform: translateY(-3px); }
+    .feature-card { transition: all 0.2s ease; }
     .plan-card:hover { border-color: #FF2D2D88 !important; transform: translateY(-4px); }
-    .plan-card-hot { animation: glowRed 3.5s ease-in-out infinite; }
-    .plan-card-hot:hover { transform: translateY(-4px); }
-
-    .step-circle { transition: all 0.25s ease; }
-
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #FF2D2D66 !important; }
-    input::placeholder, textarea::placeholder { color: #444; }
-    .beta-input { transition: all 0.2s ease; }
-    .beta-input:focus { border-color: #FFB800 !important; box-shadow: 0 0 0 3px #FFB80022; background: #161306 !important; }
+    .plan-card { transition: all 0.2s ease; }
+    input:focus { outline: none; border-color: #FF2D2D66 !important; }
+    input::placeholder { color: #333; }
     button:active { opacity: 0.85; }
-    .btn-primary { transition: all 0.2s ease; }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 36px #FF2D2D66; }
-    .btn-secondary { transition: all 0.2s ease; }
-    .btn-secondary:hover { border-color: #00FF8866 !important; color: #00FF88 !important; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #080808; }
     ::-webkit-scrollbar-thumb { background: #FF2D2D44; border-radius: 4px; }
@@ -283,12 +246,12 @@ export default function LandingPage({ onGetStarted }) {
 
   // ─── MAIN LANDING PAGE ───────────────────────────────────────────
   const features = [
-    { icon: "🚨", title: "Panic Button", desc: "One tap sends your live GPS to emergency contacts and nearby users instantly.", accent: "#FF2D2D" },
-    { icon: "📡", title: "Community Alerts", desc: "Report and view real-time security incidents — robbery, kidnapping, suspicious activity.", accent: "#00FF88" },
-    { icon: "🕵️", title: "Anonymous Tips", desc: "Submit security tips without revealing your identity. Fight crime safely.", accent: "#4A90D9" },
-    { icon: "💰", title: "Ransom Alert", desc: "Verified contacts for DSS, Police, Army, EFCC — ready when it matters most.", accent: "#FFB800" },
-    { icon: "📍", title: "Nearby Alerts", desc: "See live security threats near your current location. Stay aware, stay safe.", accent: "#00FF88" },
-    { icon: "📰", title: "Security News", desc: "Real-time Nigerian security news from Channels TV, Punch, Vanguard and more.", accent: "#FF6B00" },
+    { icon: "🚨", title: "Panic Button", desc: "One tap sends your live GPS to emergency contacts and nearby users instantly." },
+    { icon: "📡", title: "Community Alerts", desc: "Report and view real-time security incidents — robbery, kidnapping, suspicious activity." },
+    { icon: "🕵️", title: "Anonymous Tips", desc: "Submit security tips without revealing your identity. Fight crime safely." },
+    { icon: "💰", title: "Ransom Alert", desc: "Verified contacts for DSS, Police, Army, EFCC — ready when it matters most." },
+    { icon: "📍", title: "Nearby Alerts", desc: "See live security threats near your current location. Stay aware, stay safe." },
+    { icon: "📰", title: "Security News", desc: "Real-time Nigerian security news from Channels TV, Punch, Vanguard and more." },
   ];
 
   const plans = [
@@ -297,62 +260,49 @@ export default function LandingPage({ onGetStarted }) {
     { name: "Premium", price: "₦3,500", duration: "/month", color: "#FF2D2D", features: ["Everything in Basic", "VVIP Alerts", "Safe Convoy", "Team Support", "Live Broadcast"], hot: true },
   ];
 
-  const betaInputStyle = { width: "100%", background: "#0f0f0f", border: "1.5px solid #2e2e2e", borderRadius: 10, padding: "14px 18px", color: "#fff", fontSize: 17, fontFamily: "'Barlow Condensed', sans-serif" };
-  const betaLabelStyle = { display: "block", fontSize: 13, fontWeight: 700, letterSpacing: 2, color: "#FFB800", marginBottom: 8, textTransform: "uppercase", fontFamily: "monospace" };
+  const betaInputStyle = { width: "100%", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 10, padding: "14px 18px", color: "#fff", fontSize: 17, fontFamily: "'Barlow Condensed', sans-serif" };
 
   return (
     <div style={{ background: "linear-gradient(180deg, #0a0f05 0%, #080d04 40%, #0a0f05 70%, #0a0f05 100%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", overflowX: "hidden" }}>
       <style>{CSS}</style>
 
       {/* NAV */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#08080899", backdropFilter: "blur(12px)", borderBottom: "1px solid #1a2a10", boxShadow: "0 1px 0 #00FF8822", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: 1 }}>🛡️ SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
-        <button className="btn-primary" onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 8, padding: "11px 24px", color: "#fff", fontSize: 13, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", boxShadow: "0 4px 16px #FF2D2D44" }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, background: "#08080899", backdropFilter: "blur(12px)", borderBottom: "1px solid #003300", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1 }}>🛡️ SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
+        <button onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 8, padding: "10px 22px", color: "#fff", fontSize: 13, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", boxShadow: "0 4px 16px #FF2D2D44" }}>
           GET STARTED
         </button>
       </nav>
 
       {/* HERO */}
-      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "140px 24px 80px", background: "radial-gradient(ellipse at 50% 20%, #1a2a0088 0%, #0a0f05 50%), radial-gradient(ellipse at 80% 80%, #2a1a0033 0%, transparent 60%), radial-gradient(ellipse at 20% 100%, #1a2a0044 0%, transparent 50%)" }}>
-        <div style={{ width: 120, height: 120, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64, marginBottom: 24, background: "radial-gradient(circle, #00FF8822 0%, transparent 70%)", border: "1px solid #00FF8833", animation: "pulse 2.5s ease-in-out infinite" }}>🛡️</div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, letterSpacing: 4, color: "#FFB800", fontFamily: "monospace", marginBottom: 24, padding: "8px 20px", borderRadius: 30, border: "1px solid #FFB80044", background: "#FFB80011" }}>🇳🇬 NIGERIA'S #1 COMMUNITY SAFETY NETWORK</div>
-        <h1 style={{ fontSize: "clamp(44px, 10vw, 104px)", fontWeight: 900, lineHeight: 1.02, letterSpacing: "-2px", marginBottom: 24, maxWidth: 800 }}>
-          Your Safety,<br /><span style={{ background: "linear-gradient(135deg,#FFB800,#FF6B00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>One Tap</span> Away
+      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "120px 24px 80px", background: "radial-gradient(ellipse at 50% 20%, #1a2a0088 0%, #0a0f05 50%), radial-gradient(ellipse at 80% 80%, #2a1a0033 0%, transparent 60%), radial-gradient(ellipse at 20% 100%, #1a2a0044 0%, transparent 50%)" }}>
+        <div style={{ fontSize: 72, marginBottom: 16, animation: "pulse 2.5s ease-in-out infinite" }}>🛡️</div>
+        <div style={{ fontSize: 11, letterSpacing: 5, background: "linear-gradient(135deg,#FFB800,#aa7700)", fontFamily: "monospace", marginBottom: 16 }}>🇳🇬 NIGERIA'S #1 COMMUNITY SAFETY NETWORK</div>
+        <h1 style={{ fontSize: "clamp(40px, 8vw, 80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: 1, marginBottom: 20, maxWidth: 700 }}>
+          Your Safety,<br /><span style={{ color: "#FFB800" }}>One Tap</span> Away
         </h1>
-        <p style={{ fontSize: "clamp(16px, 2vw, 20px)", color: "#bbb", lineHeight: 1.8, maxWidth: 520, marginBottom: 44 }}>
+        <p style={{ fontSize: 18, color: "#bbb", lineHeight: 1.8, maxWidth: 500, marginBottom: 40 }}>
           Real-time security alerts, panic button, anonymous tips and community-powered incident reporting — built for Nigerians, by Nigerians.
         </p>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
-          <button className="btn-primary" onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 12, padding: "18px 40px", color: "#fff", fontSize: 17, fontWeight: 900, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", boxShadow: "0 6px 28px #FF2D2D44" }}>
+          <button onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ background: "linear-gradient(135deg,#FF2D2D,#990000)", border: "none", borderRadius: 12, padding: "16px 36px", color: "#fff", fontSize: 16, fontWeight: 900, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", boxShadow: "0 6px 28px #FF2D2D44" }}>
             🚀 START FOR FREE
           </button>
-          <button className="btn-secondary" onClick={onGetStarted} style={{ background: "transparent", border: "1px solid #2a2a2a", borderRadius: 12, padding: "18px 40px", color: "#888", fontSize: 17, fontWeight: 700, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <button onClick={onGetStarted} style={{ background: "transparent", border: "1px solid #2a2a2a", borderRadius: 12, padding: "16px 36px", color: "#888", fontSize: 16, fontWeight: 700, letterSpacing: 2, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif" }}>
             🔑 LOGIN
           </button>
         </div>
-
-        {/* STATS */}
-        <div style={{ marginTop: 72, display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: 760 }}>
-          {[
-            { icon: "🇳🇬", value: 50000, suffix: "+", label: "Nigerians Registered", color: "#00FF88" },
-            { icon: "⚡", value: 120000, suffix: "+", label: "Real-Time Alerts Sent", color: "#FF2D2D" },
-            { icon: "🛡️", value: 8, suffix: "", label: "Core Safety Features", color: "#FFB800" },
-          ].map(stat => (
-            <div key={stat.label} className="stat-card" style={{ flex: "1 1 180px", minWidth: 160, background: "#0c0f08", border: `1px solid ${stat.color}33`, borderRadius: 16, padding: "26px 20px", "--glow": `${stat.color}33` }}>
-              <div style={{ fontSize: 30, marginBottom: 10 }}>{stat.icon}</div>
-              <div style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: stat.color, letterSpacing: "-1px" }}>
-                <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-              </div>
-              <div style={{ fontSize: 12, color: "#888", letterSpacing: 2, marginTop: 8, textTransform: "uppercase", fontWeight: 700 }}>{stat.label}</div>
-            </div>
+        <div style={{ marginTop: 60, display: "flex", gap: 40, flexWrap: "wrap", justifyContent: "center" }}>
+          {[["🇳🇬", "Nigeria-Focused"], ["⚡", "Real-Time Alerts"], ["🔒", "Anonymous & Secure"]].map(([icon, label]) => (
+            <div key={label} style={{ fontSize: 13, color: "#444", letterSpacing: 1 }}>{icon} {label}</div>
           ))}
         </div>
       </section>
 
       {/* BETA TESTING */}
-      <section style={{ padding: "clamp(64px, 9vw, 110px) 24px", background: "linear-gradient(180deg, #0a0a0a 0%, #0f0a02 50%, #0a0a0a 100%)" }}>
+      <section style={{ padding: "80px 24px", background: "linear-gradient(180deg, #0a0a0a 0%, #0f0a02 50%, #0a0a0a 100%)" }}>
         <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, letterSpacing: 4, color: "#FFB800", fontFamily: "monospace", marginBottom: 16, padding: "6px 18px", borderRadius: 30, border: "1px solid #FFB80044", background: "#FFB80011" }}>LIMITED SPOTS</div>
+          <div style={{ fontSize: 12, letterSpacing: 5, color: "#FFB800", fontFamily: "monospace", marginBottom: 12 }}>LIMITED SPOTS</div>
           <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1 }}>Join the <span style={{ color: "#FFB800" }}>Beta</span> Program</h2>
           <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#aa7700,#FFB800,#aa7700)", margin: "20px auto 24px", borderRadius: 2 }} />
           <p style={{ fontSize: 17, color: "#999", lineHeight: 1.8, marginBottom: 28 }}>
@@ -383,32 +333,17 @@ export default function LandingPage({ onGetStarted }) {
               😔 All 100 beta spots have been claimed. Check back later!
             </div>
           ) : (
-            <form onSubmit={handleBetaSignup} style={{ display: "flex", flexDirection: "column", gap: 18, textAlign: "left", background: "#0a0a0a", border: "1px solid #1e1a0a", borderRadius: 16, padding: "28px 24px" }}>
-              <div>
-                <label style={betaLabelStyle}>Full Name</label>
-                <input className="beta-input" type="text" placeholder="Full Name" value={betaForm.name} onChange={e => setBetaForm(f => ({ ...f, name: e.target.value }))} style={betaInputStyle} />
-              </div>
-              <div>
-                <label style={betaLabelStyle}>Email Address</label>
-                <input className="beta-input" type="email" placeholder="Email Address" value={betaForm.email} onChange={e => setBetaForm(f => ({ ...f, email: e.target.value }))} style={betaInputStyle} />
-              </div>
-              <div>
-                <label style={betaLabelStyle}>State of Residence</label>
-                <select className="beta-input" value={betaForm.state} onChange={e => setBetaForm(f => ({ ...f, state: e.target.value }))} style={{ ...betaInputStyle, color: betaForm.state ? "#fff" : "#555" }}>
-                  <option value="">State of Residence</option>
-                  {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={betaLabelStyle}>Phone Number</label>
-                <input className="beta-input" type="tel" placeholder="Phone Number" value={betaForm.phone} onChange={e => setBetaForm(f => ({ ...f, phone: e.target.value }))} style={betaInputStyle} />
-              </div>
-              <div>
-                <label style={betaLabelStyle}>Why do you want to be a beta tester?</label>
-                <textarea className="beta-input" placeholder="Why do you want to be a beta tester?" value={betaForm.why} onChange={e => setBetaForm(f => ({ ...f, why: e.target.value }))} style={{ ...betaInputStyle, resize: "none", height: 90, fontFamily: "'Barlow Condensed', sans-serif" }} />
-              </div>
+            <form onSubmit={handleBetaSignup} style={{ display: "flex", flexDirection: "column", gap: 12, textAlign: "left" }}>
+              <input type="text" placeholder="Full Name" value={betaForm.name} onChange={e => setBetaForm(f => ({ ...f, name: e.target.value }))} style={betaInputStyle} />
+              <input type="email" placeholder="Email Address" value={betaForm.email} onChange={e => setBetaForm(f => ({ ...f, email: e.target.value }))} style={betaInputStyle} />
+              <select value={betaForm.state} onChange={e => setBetaForm(f => ({ ...f, state: e.target.value }))} style={{ ...betaInputStyle, color: betaForm.state ? "#fff" : "#333" }}>
+                <option value="">State of Residence</option>
+                {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input type="tel" placeholder="Phone Number" value={betaForm.phone} onChange={e => setBetaForm(f => ({ ...f, phone: e.target.value }))} style={betaInputStyle} />
+              <textarea placeholder="Why do you want to be a beta tester?" value={betaForm.why} onChange={e => setBetaForm(f => ({ ...f, why: e.target.value }))} style={{ ...betaInputStyle, resize: "none", height: 90, fontFamily: "'Barlow Condensed', sans-serif" }} />
               {betaError && <div style={{ color: "#FF6B00", fontSize: 14, fontFamily: "monospace" }}>⚠ {betaError}</div>}
-              <button type="submit" disabled={betaSubmitting} style={{ background: "linear-gradient(135deg,#FFB800,#aa7700)", border: "none", borderRadius: 10, padding: "16px", color: "#000", fontSize: 17, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", opacity: betaSubmitting ? 0.6 : 1, boxShadow: "0 6px 24px #FFB80033" }}>
+              <button type="submit" disabled={betaSubmitting} style={{ background: "linear-gradient(135deg,#FFB800,#aa7700)", border: "none", borderRadius: 10, padding: "14px", color: "#000", fontSize: 17, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", opacity: betaSubmitting ? 0.6 : 1 }}>
                 {betaSubmitting ? "SUBMITTING..." : "🚀 CLAIM MY SPOT"}
               </button>
             </form>
@@ -417,23 +352,17 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* FEATURES */}
-      <section style={{ padding: "clamp(64px, 9vw, 110px) 24px", maxWidth: 1100, margin: "0 auto" }}>
+      <section style={{ padding: "80px 24px", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, letterSpacing: 4, color: "#2ECC71", fontFamily: "monospace", marginBottom: 16, padding: "6px 18px", borderRadius: 30, border: "1px solid #2ECC7144", background: "#2ECC7111" }}>WHAT WE DO</div>
+          <div style={{ fontSize: 10, letterSpacing: 5, color: "#2ECC71", fontFamily: "monospace", marginBottom: 12 }}>WHAT WE DO</div>
           <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1 }}>Built for Nigerian <span style={{ color: "#FF2D2D" }}>Realities</span></h2>
           <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#008800,#FF2D2D,#008800)", margin: "20px auto 0", borderRadius: 2 }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
           {features.map(f => (
-            <div key={f.title} className="feature-card" style={{
-              borderRadius: 18,
-              padding: "32px 28px",
-              border: "1.5px solid transparent",
-              background: `linear-gradient(#111a08, #111a08) padding-box, linear-gradient(135deg, ${f.accent}99, #1a2410 65%) border-box`,
-              "--glow": `${f.accent}44`,
-            }}>
-              <div className="feature-icon" style={{ fontSize: 52, marginBottom: 18, display: "inline-block" }}>{f.icon}</div>
-              <div style={{ fontSize: 19, fontWeight: 900, letterSpacing: 1, marginBottom: 12 }}>{f.title}</div>
+            <div key={f.title} className="feature-card" style={{ background: "#111a08", border: "1px solid #2a3a10", borderRadius: 16, padding: 28 }}>
+              <div style={{ fontSize: 36, marginBottom: 14 }}>{f.icon}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>{f.title}</div>
               <div style={{ fontSize: 15, color: "#999", lineHeight: 1.8 }}>{f.desc}</div>
             </div>
           ))}
@@ -441,25 +370,20 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* HOW IT WORKS */}
-      <section style={{ padding: "clamp(64px, 9vw, 110px) 24px", background: "linear-gradient(180deg, #0a0a0a 0%, #050a05 50%, #0a0a0a 100%)" }}>
+      <section style={{ padding: "80px 24px", background: "linear-gradient(180deg, #0a0a0a 0%, #050a05 50%, #0a0a0a 100%)" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, letterSpacing: 4, color: "#00AA44", fontFamily: "monospace", marginBottom: 16, padding: "6px 18px", borderRadius: 30, border: "1px solid #00AA4444", background: "#00AA4411" }}>HOW IT WORKS</div>
-          <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1, marginBottom: 64 }}>Up and Running in <span style={{ color: "#00AA44" }}>3 Steps</span></h2>
-          <div style={{ maxWidth: 600, margin: "0 auto", textAlign: "left" }}>
+          <div style={{ fontSize: 10, letterSpacing: 5, color: "#00AA44", fontFamily: "monospace", marginBottom: 12 }}>HOW IT WORKS</div>
+          <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1, marginBottom: 56 }}>Up and Running in <span style={{ color: "#00AA44" }}>3 Steps</span></h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 32 }}>
             {[
               { num: "01", title: "Sign Up Free", desc: "Create your account in seconds. No password needed — just your email and a magic link." },
               { num: "02", title: "Set Up Your Profile", desc: "Add your name, phone number, state of residence and emergency contacts." },
               { num: "03", title: "Stay Protected", desc: "Get real-time alerts, report incidents, and trigger your panic button anytime." },
-            ].map((s, i, arr) => (
-              <div key={s.num} style={{ display: "flex", gap: 24 }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-                  <div className="step-circle" style={{ width: 60, height: 60, borderRadius: "50%", background: "linear-gradient(135deg,#003300,#00AA44)", border: "2px solid #00FF8866", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 900, color: "#00FF88", flexShrink: 0, fontFamily: "monospace" }}>{s.num}</div>
-                  {i < arr.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 56, marginTop: 4, background: "linear-gradient(180deg,#00AA4488,#00440022)" }} />}
-                </div>
-                <div style={{ paddingBottom: i < arr.length - 1 ? 48 : 0, paddingTop: 10 }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>{s.title}</div>
-                  <div style={{ fontSize: 15, color: "#999", lineHeight: 1.8 }}>{s.desc}</div>
-                </div>
+            ].map(s => (
+              <div key={s.num} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 48, fontWeight: 900, color: "#00440022", fontFamily: "monospace", marginBottom: 8 }}>{s.num}</div>
+                <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>{s.title}</div>
+                <div style={{ fontSize: 13, color: "#888", lineHeight: 1.8 }}>{s.desc}</div>
               </div>
             ))}
           </div>
@@ -467,27 +391,27 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* PRICING */}
-      <section style={{ padding: "clamp(64px, 9vw, 110px) 24px", maxWidth: 1000, margin: "0 auto" }}>
+      <section style={{ padding: "80px 24px", maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, letterSpacing: 4, color: "#00AA44", fontFamily: "monospace", marginBottom: 16, padding: "6px 18px", borderRadius: 30, border: "1px solid #00AA4444", background: "#00AA4411" }}>PRICING</div>
+          <div style={{ fontSize: 10, letterSpacing: 5, color: "#00AA44", fontFamily: "monospace", marginBottom: 12 }}>PRICING</div>
           <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1 }}>Simple, <span style={{ color: "#FF2D2D" }}>Affordable</span> Plans</h2>
           <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#008800,#FF2D2D,#008800)", margin: "20px auto 0", borderRadius: 2 }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
           {plans.map(p => (
-            <div key={p.name} className={`plan-card ${p.hot ? "plan-card-hot" : ""}`} style={{ background: p.hot ? "linear-gradient(180deg, #1a0606 0%, #0d0d0d 100%)" : "#0d0d0d", border: `${p.hot ? "2px" : "1px"} solid ${p.hot ? "#FF2D2D77" : "#1a1a1a"}`, borderRadius: 16, padding: 28, position: "relative" }}>
-              {p.hot && <div style={{ position: "absolute", top: -12, right: 20, background: "linear-gradient(135deg,#FF2D2D,#FF8800)", borderRadius: 20, padding: "4px 14px", fontSize: 10, fontWeight: 900, letterSpacing: 2, boxShadow: "0 4px 16px #FF2D2D66" }}>🔥 POPULAR</div>}
-              <div style={{ fontSize: 11, letterSpacing: 3, color: p.color, fontFamily: "monospace", marginBottom: 10, fontWeight: 700 }}>{p.name.toUpperCase()}</div>
-              <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: "-1px", marginBottom: 4 }}>{p.price}</div>
-              <div style={{ fontSize: 12, color: "#555", marginBottom: 24, fontFamily: "monospace" }}>{p.duration}</div>
+            <div key={p.name} className="plan-card" style={{ background: "#0d0d0d", border: `1px solid ${p.hot ? "#FF2D2D44" : "#1a1a1a"}`, borderRadius: 16, padding: 28, position: "relative" }}>
+              {p.hot && <div style={{ position: "absolute", top: -12, right: 20, background: "linear-gradient(135deg,#FF2D2D,#FF8800)", borderRadius: 20, padding: "4px 14px", fontSize: 10, fontWeight: 900, letterSpacing: 2 }}>🔥 POPULAR</div>}
+              <div style={{ fontSize: 10, letterSpacing: 3, color: p.color, fontFamily: "monospace", marginBottom: 10 }}>{p.name.toUpperCase()}</div>
+              <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: 1, marginBottom: 4 }}>{p.price}</div>
+              <div style={{ fontSize: 12, color: "#444", marginBottom: 24, fontFamily: "monospace" }}>{p.duration}</div>
               <div style={{ marginBottom: 28 }}>
                 {p.features.map(feat => (
-                  <div key={feat} style={{ fontSize: 15, color: "#999", padding: "9px 0", borderBottom: "1px solid #161616", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ color: p.color, fontSize: 12, fontWeight: 900 }}>✓</span> {feat}
+                  <div key={feat} style={{ fontSize: 15, color: "#999", padding: "7px 0", borderBottom: "1px solid #111", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: p.color, fontSize: 10 }}>✓</span> {feat}
                   </div>
                 ))}
               </div>
-              <button onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ width: "100%", background: p.hot ? "linear-gradient(135deg,#FF2D2D,#990000)" : "transparent", border: `1px solid ${p.hot ? "transparent" : "#2a2a2a"}`, borderRadius: 10, padding: 14, color: p.hot ? "#fff" : "#666", fontSize: 14, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", boxShadow: p.hot ? "0 6px 24px #FF2D2D44" : "none" }}>
+              <button onClick={() => { setSlideIndex(0); setScreen("slides"); }} style={{ width: "100%", background: p.hot ? "linear-gradient(135deg,#FF2D2D,#990000)" : "transparent", border: `1px solid ${p.hot ? "transparent" : "#2a2a2a"}`, borderRadius: 10, padding: 13, color: p.hot ? "#fff" : "#666", fontSize: 13, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif" }}>
                 GET STARTED
               </button>
             </div>
@@ -496,9 +420,9 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* NEWSLETTER */}
-      <section style={{ padding: "clamp(64px, 9vw, 110px) 24px", background: "radial-gradient(ellipse at 50% 50%, #00330022 0%, #080808 70%)" }}>
+      <section style={{ padding: "80px 24px", background: "radial-gradient(ellipse at 50% 50%, #00330022 0%, #080808 70%)" }}>
         <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, letterSpacing: 4, color: "#00AA44", fontFamily: "monospace", marginBottom: 16, padding: "6px 18px", borderRadius: 30, border: "1px solid #00AA4444", background: "#00AA4411" }}>STAY INFORMED</div>
+          <div style={{ fontSize: 10, letterSpacing: 5, color: "#00AA44", fontFamily: "monospace", marginBottom: 12 }}>STAY INFORMED</div>
           <h2 style={{ fontSize: "clamp(26px, 5vw, 42px)", fontWeight: 900, letterSpacing: 1, marginBottom: 12 }}>Get Security <span style={{ color: "#00AA44" }}>Updates</span></h2>
           <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#008800,#00FF88)", margin: "0 auto 24px", borderRadius: 2 }} />
           <p style={{ fontSize: 15, color: "#999", lineHeight: 1.8, marginBottom: 32 }}>Subscribe to receive safety tips, new feature announcements, and critical security alerts for Nigeria.</p>
