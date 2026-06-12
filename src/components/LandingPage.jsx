@@ -1,5 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+
+const NIGERIAN_STATES = [
+  "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+  "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT Abuja","Gombe",
+  "Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos",
+  "Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers",
+  "Sokoto","Taraba","Yobe","Zamfara"
+];
 
 const SLIDES = [
   { icon: "🛡️", color: "#FF2D2D", title: "WELCOME TO SAFEALERTNG", subtitle: "Nigeria's #1 Community Safety Network", tag: "SECURITY · COMMUNITY · PROTECTION", body: "SafeAlertNG is a real-time security platform built for Nigerians. Report threats, trigger panic alerts, and stay informed — all in one place." },
@@ -20,8 +28,47 @@ export default function LandingPage({ onGetStarted }) {
   const [newsletterStatus, setNewsletterStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [betaCount, setBetaCount] = useState(0);
+  const [betaForm, setBetaForm] = useState({ name: "", email: "", state: "", phone: "", why: "" });
+  const [betaSubmitting, setBetaSubmitting] = useState(false);
+  const [betaError, setBetaError] = useState("");
+  const [betaResult, setBetaResult] = useState(null);
+
   const slide = SLIDES[slideIndex];
   const isLast = slideIndex === SLIDES.length - 1;
+
+  useEffect(() => {
+    supabase.rpc("get_beta_signup_count").then(({ data, error }) => {
+      if (!error && typeof data === "number") setBetaCount(data);
+    });
+  }, []);
+
+  const handleBetaSignup = async (e) => {
+    e.preventDefault();
+    const { name, email: betaEmail, state, phone, why } = betaForm;
+    if (!name.trim() || !betaEmail.includes("@") || !state || !phone.trim() || !why.trim()) {
+      setBetaError("Please fill in all fields with a valid email.");
+      return;
+    }
+    setBetaError("");
+    setBetaSubmitting(true);
+    const { data, error } = await supabase.rpc("signup_beta_tester", {
+      p_name: name.trim(),
+      p_email: betaEmail.trim().toLowerCase(),
+      p_state: state,
+      p_phone: phone.trim(),
+      p_why: why.trim(),
+    });
+    setBetaSubmitting(false);
+    if (error) {
+      setBetaError(error.message?.includes("BETA_FULL") ? "All 100 beta spots have been claimed." : "Something went wrong. Please try again.");
+      if (error.message?.includes("BETA_FULL")) setBetaCount(100);
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    setBetaResult({ spotNumber: row.spot_number, alreadyRegistered: row.already_registered });
+    if (!row.already_registered) setBetaCount(c => Math.min(c + 1, 100));
+  };
 
   const handleNewsletter = async () => {
     if (!email.includes("@")) { setNewsletterStatus("error"); return; }
@@ -168,6 +215,8 @@ export default function LandingPage({ onGetStarted }) {
     { name: "Premium", price: "₦3,500", duration: "/month", color: "#FF2D2D", features: ["Everything in Basic", "VVIP Alerts", "Safe Convoy", "Team Support", "Live Broadcast"], hot: true },
   ];
 
+  const betaInputStyle = { width: "100%", background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 10, padding: "14px 18px", color: "#fff", fontSize: 14, fontFamily: "'Barlow Condensed', sans-serif" };
+
   return (
     <div style={{ background: "linear-gradient(180deg, #0a0f05 0%, #080d04 40%, #0a0f05 70%, #0a0f05 100%)", minHeight: "100vh", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff", overflowX: "hidden" }}>
       <style>{CSS}</style>
@@ -270,6 +319,58 @@ export default function LandingPage({ onGetStarted }) {
               </button>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* BETA TESTING */}
+      <section style={{ padding: "80px 24px", background: "linear-gradient(180deg, #0a0a0a 0%, #0f0a02 50%, #0a0a0a 100%)" }}>
+        <div style={{ maxWidth: 540, margin: "0 auto", textAlign: "center" }}>
+          <div style={{ fontSize: 10, letterSpacing: 5, color: "#FFB800", fontFamily: "monospace", marginBottom: 12 }}>LIMITED SPOTS</div>
+          <h2 style={{ fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 900, letterSpacing: 1 }}>Join the <span style={{ color: "#FFB800" }}>Beta</span> Program</h2>
+          <div style={{ width: 44, height: 3, background: "linear-gradient(90deg,#aa7700,#FFB800,#aa7700)", margin: "20px auto 24px", borderRadius: 2 }} />
+          <p style={{ fontSize: 15, color: "#999", lineHeight: 1.8, marginBottom: 28 }}>
+            Be one of the first 100 Nigerians to try new SafeAlertNG features before everyone else.
+          </p>
+
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 13, color: "#ccc", marginBottom: 8, fontWeight: 700, letterSpacing: 1 }}>{betaCount}/100 SPOTS TAKEN</div>
+            <div style={{ width: "100%", height: 8, background: "#1a1a1a", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ width: `${Math.min(betaCount, 100)}%`, height: "100%", background: "linear-gradient(90deg,#aa7700,#FFB800)", borderRadius: 4, transition: "width 0.4s ease" }} />
+            </div>
+          </div>
+
+          {betaResult ? (
+            <div style={{ background: "#FFB80011", border: "1px solid #FFB80033", borderRadius: 12, padding: 28 }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🎉</div>
+              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 6, color: "#FFB800" }}>
+                {betaResult.alreadyRegistered ? "You're already on the list!" : "You're in!"}
+              </div>
+              <div style={{ fontSize: 14, color: "#bbb" }}>Your beta tester spot number is</div>
+              <div style={{ fontSize: 48, fontWeight: 900, color: "#fff", margin: "8px 0" }}>#{betaResult.spotNumber}</div>
+              <div style={{ fontSize: 13, color: "#777", lineHeight: 1.7 }}>
+                {betaResult.alreadyRegistered ? "We'll notify you at the email you registered with." : "We'll email you when your beta access is ready."}
+              </div>
+            </div>
+          ) : betaCount >= 100 ? (
+            <div style={{ background: "#FF2D2D11", border: "1px solid #FF2D2D33", borderRadius: 12, padding: 24, color: "#FF6B6B", fontSize: 14, fontWeight: 700 }}>
+              😔 All 100 beta spots have been claimed. Check back later!
+            </div>
+          ) : (
+            <form onSubmit={handleBetaSignup} style={{ display: "flex", flexDirection: "column", gap: 12, textAlign: "left" }}>
+              <input type="text" placeholder="Full Name" value={betaForm.name} onChange={e => setBetaForm(f => ({ ...f, name: e.target.value }))} style={betaInputStyle} />
+              <input type="email" placeholder="Email Address" value={betaForm.email} onChange={e => setBetaForm(f => ({ ...f, email: e.target.value }))} style={betaInputStyle} />
+              <select value={betaForm.state} onChange={e => setBetaForm(f => ({ ...f, state: e.target.value }))} style={{ ...betaInputStyle, color: betaForm.state ? "#fff" : "#333" }}>
+                <option value="">State of Residence</option>
+                {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input type="tel" placeholder="Phone Number" value={betaForm.phone} onChange={e => setBetaForm(f => ({ ...f, phone: e.target.value }))} style={betaInputStyle} />
+              <textarea placeholder="Why do you want to be a beta tester?" value={betaForm.why} onChange={e => setBetaForm(f => ({ ...f, why: e.target.value }))} style={{ ...betaInputStyle, resize: "none", height: 90, fontFamily: "'Barlow Condensed', sans-serif" }} />
+              {betaError && <div style={{ color: "#FF6B00", fontSize: 11, fontFamily: "monospace" }}>⚠ {betaError}</div>}
+              <button type="submit" disabled={betaSubmitting} style={{ background: "linear-gradient(135deg,#FFB800,#aa7700)", border: "none", borderRadius: 10, padding: "14px", color: "#000", fontSize: 14, fontWeight: 900, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", opacity: betaSubmitting ? 0.6 : 1 }}>
+                {betaSubmitting ? "SUBMITTING..." : "🚀 CLAIM MY SPOT"}
+              </button>
+            </form>
+          )}
         </div>
       </section>
 
