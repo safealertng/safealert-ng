@@ -72,12 +72,25 @@ export default function LandingPage({ onGetStarted }) {
     setBetaResult({ spotNumber: row.spot_number, alreadyRegistered: row.already_registered });
     if (!row.already_registered) {
       setBetaCount(c => Math.min(c + 1, 100));
+      const trimmedName = name.trim();
+      const trimmedEmail = betaEmail.trim().toLowerCase();
+      const welcomeSubject = `Welcome Beta Tester #${row.spot_number} - Your spot is confirmed on SafeAlertNG`;
+      const welcomeMessage = `Congratulations ${trimmedName}! You're Beta Tester #${row.spot_number}. Your spot in the SafeAlertNG beta program is confirmed for ${trimmedEmail}. We'll email you when your beta access is ready.`;
       emailjs.send("safealert_service", "template_ooew17k", {
-        to_email: betaEmail.trim().toLowerCase(),
-        to_name: name.trim(),
-        subject: `Welcome Beta Tester #${row.spot_number} - Your spot is confirmed on SafeAlertNG`,
-        message: `Congratulations! You're Beta Tester #${row.spot_number}. Your spot in the SafeAlertNG beta program is confirmed. We'll email you when your beta access is ready.`,
-      }).catch(err => console.error("EmailJS error:", err));
+        to_email: trimmedEmail,
+        to_name: trimmedName,
+        name: trimmedName,
+        email: trimmedEmail,
+        spot_number: row.spot_number,
+        subject: welcomeSubject,
+        message: welcomeMessage,
+        category: "Beta Tester Welcome",
+        agency: "SafeAlertNG",
+        state: `Beta Tester #${row.spot_number}`,
+        urgency: trimmedName,
+        tip_text: welcomeMessage,
+        time: new Date().toLocaleString("en-NG"),
+      }).then(() => console.log("Beta welcome email sent")).catch(err => console.error("EmailJS beta welcome error:", err));
     }
   };
 
