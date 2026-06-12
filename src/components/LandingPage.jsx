@@ -293,8 +293,8 @@ export default function LandingPage({ onGetStarted }) {
 
   const plans = [
     { name: "Freemium", price: "Free", duration: "90-day trial", color: "#00FF88", features: ["Panic Button", "Community Alerts", "Up to 3 emergency contacts", "Security News"] },
-    { name: "Basic", price: "₦2,000", duration: "/month", color: "#FF8800", features: ["Everything in Freemium", "Anonymous Tips", "Nearby Alerts", "Unlimited contacts"] },
-    { name: "Premium", price: "₦3,500", duration: "/month", color: "#FF2D2D", features: ["Everything in Basic", "VVIP Alerts", "Safe Convoy", "Team Support", "Live Broadcast"], hot: true },
+    { name: "Basic", price: "₦2,000", duration: "/month", color: "#FF8800", features: ["Everything in Freemium", "Anonymous Tips", "Nearby Alerts", "Unlimited contacts", "Family Tracker"] },
+    { name: "Premium", price: "₦3,500", duration: "/month", color: "#FF2D2D", features: ["Everything in Basic", "VVIP Alerts", "Safe Convoy", "Team Support", "Live Broadcast", "Shake-to-SOS"], hot: true },
   ];
 
   const betaInputStyle = { width: "100%", background: "#0f0f0f", border: "1.5px solid #2e2e2e", borderRadius: 10, padding: "14px 18px", color: "#fff", fontSize: 17, fontFamily: "'Barlow Condensed', sans-serif" };
