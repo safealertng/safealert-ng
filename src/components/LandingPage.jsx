@@ -74,8 +74,11 @@ export default function LandingPage({ onGetStarted }) {
       setBetaCount(c => Math.min(c + 1, 100));
       const trimmedName = name.trim();
       const trimmedEmail = betaEmail.trim().toLowerCase();
+      const sentAt = new Date().toLocaleString("en-NG");
       const welcomeSubject = `Welcome Beta Tester #${row.spot_number} - Your spot is confirmed on SafeAlertNG`;
       const welcomeMessage = `Congratulations ${trimmedName}! You're Beta Tester #${row.spot_number}. Your spot in the SafeAlertNG beta program is confirmed for ${trimmedEmail}. We'll email you when your beta access is ready.`;
+
+      // Welcome email to the beta tester's own address.
       emailjs.send("safealert_service", "template_ooew17k", {
         to_email: trimmedEmail,
         to_name: trimmedName,
@@ -89,8 +92,26 @@ export default function LandingPage({ onGetStarted }) {
         state: `Beta Tester #${row.spot_number}`,
         urgency: trimmedName,
         tip_text: welcomeMessage,
-        time: new Date().toLocaleString("en-NG"),
+        time: sentAt,
       }).then(() => console.log("Beta welcome email sent")).catch(err => console.error("EmailJS beta welcome error:", err));
+
+      // Copy notification to the admin so they know a new beta tester signed up.
+      const adminMessage = `New beta tester signup! Name: ${trimmedName}, Email: ${trimmedEmail}, State: ${state}, Phone: ${phone.trim()}, Spot #${row.spot_number}. Reason: ${why.trim()}`;
+      emailjs.send("safealert_service", "template_ooew17k", {
+        to_email: "lordfosterinc@gmail.com",
+        to_name: "Admin",
+        name: trimmedName,
+        email: trimmedEmail,
+        spot_number: row.spot_number,
+        subject: `New Beta Signup: ${trimmedName} (#${row.spot_number})`,
+        message: adminMessage,
+        category: "New Beta Signup",
+        agency: "SafeAlertNG Admin",
+        state: state,
+        urgency: `Spot #${row.spot_number}`,
+        tip_text: adminMessage,
+        time: sentAt,
+      }).then(() => console.log("Beta admin notification sent")).catch(err => console.error("EmailJS beta admin notification error:", err));
     }
   };
 
