@@ -28,6 +28,7 @@ export default function AdminDashboard({ session, onBack }) {
   const [subCounts, setSubCounts] = useState({ freemium: 0, basic: 0, premium: 0 });
   const [subscribers, setSubscribers] = useState([]);
   const [dau, setDau] = useState(0);
+  const [betaTesters, setBetaTesters] = useState([]);
 
   const showToast = (msg, color = "#00FF88") => {
     setToast({ msg, color });
@@ -57,7 +58,7 @@ export default function AdminDashboard({ session, onBack }) {
   const fetchAll = async () => {
     setLoading(true);
     const today = new Date().toISOString().slice(0, 10);
-    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, supportRes, subsRes, dauRes] = await Promise.all([
+    const [usersRes, incidentsRes, panicRes, rolesRes, familyRes, checkpointsRes, pendingNewsRes, supportRes, subsRes, dauRes, betaRes] = await Promise.all([
       supabase.rpc("get_all_users"),
       supabase.from("incidents").select("*").order("created_at", { ascending: false }),
       supabase.from("panic_events").select("*").order("created_at", { ascending: false }),
@@ -68,8 +69,10 @@ export default function AdminDashboard({ session, onBack }) {
       supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
       supabase.rpc("get_subscribers_with_email"),
       supabase.from("user_activity").select("*", { count: "exact", head: true }).eq("activity_date", today),
+      supabase.rpc("get_all_beta_testers"),
     ]);
     if (checkpointsRes.data) setCheckpoints(checkpointsRes.data);
+    if (betaRes.data) setBetaTesters(betaRes.data);
     if (pendingNewsRes.data) setPendingNews(pendingNewsRes.data);
     if (supportRes.data) setSupportTickets(supportRes.data);
     setDau(dauRes.count || 0);
@@ -186,6 +189,7 @@ export default function AdminDashboard({ session, onBack }) {
           ["checkpoints", "🚧 Checkpoints"],
           ["pending", `📰 Pending${pendingNews.length > 0 ? ` (${pendingNews.length})` : ""}`],
           ["support", `💬 Support${supportTickets.length > 0 ? ` (${supportTickets.length})` : ""}`],
+          ["beta", `🧪 Beta Testers (${betaTesters.length})`],
           ...(adminRole === "super_admin" ? [["roles", "🔐 Roles"]] : []),
           ...(adminRole === "super_admin" ? [["subscriptions", "💳 Subscriptions"]] : []),
         ].map(([k, l]) => (
@@ -527,6 +531,23 @@ const fileName = pathParts[1] || inc.video_url.split("/").pop();
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* BETA TESTERS */}
+        {nav === "beta" && (
+          <div>
+            <div style={A.sectionTitle}>BETA TESTERS — {betaTesters.length}/100</div>
+            {betaTesters.length === 0 && <div style={{ color: "#333", textAlign: "center", padding: 40 }}>No beta signups yet</div>}
+            {betaTesters.map(b => (
+              <div key={b.id} style={A.row}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>#{b.spot_number} · {b.name}</div>
+                  <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>{b.email}</div>
+                  <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>📍 {b.state} · Joined: {new Date(b.created_at).toLocaleDateString("en-NG")}</div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

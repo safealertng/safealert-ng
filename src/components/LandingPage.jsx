@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
+import emailjs from "@emailjs/browser";
 import { supabase } from "../lib/supabase";
+
+emailjs.init("EJAw6dlAaCLeS4iHq");
 
 const NIGERIAN_STATES = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
@@ -67,7 +70,15 @@ export default function LandingPage({ onGetStarted }) {
     }
     const row = Array.isArray(data) ? data[0] : data;
     setBetaResult({ spotNumber: row.spot_number, alreadyRegistered: row.already_registered });
-    if (!row.already_registered) setBetaCount(c => Math.min(c + 1, 100));
+    if (!row.already_registered) {
+      setBetaCount(c => Math.min(c + 1, 100));
+      emailjs.send("safealert_service", "template_ooew17k", {
+        to_email: betaEmail.trim().toLowerCase(),
+        to_name: name.trim(),
+        subject: `Welcome Beta Tester #${row.spot_number} - Your spot is confirmed on SafeAlertNG`,
+        message: `Congratulations! You're Beta Tester #${row.spot_number}. Your spot in the SafeAlertNG beta program is confirmed. We'll email you when your beta access is ready.`,
+      }).catch(err => console.error("EmailJS error:", err));
+    }
   };
 
   const handleNewsletter = async () => {
