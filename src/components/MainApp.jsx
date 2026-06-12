@@ -2251,11 +2251,12 @@ function ConvoyScreen() {
 // RANSOM ALERT NETWORK COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 const RECOVERY_AGENTS = [
-  { id: 1, name: "DSS — Dept. of State Services", specialty: "Intelligence & Counter-Kidnapping", rating: "★ Official", cases: null, verified: true, contact: "09153391309 / 09153391310 / 09088373514", whatsapp: "09153391309", icon: "🛡️" },
-  { id: 2, name: "Nigeria Police Force CRU", specialty: "Complaint Response Unit — Nationwide", rating: "★ Official", cases: null, verified: true, contact: "08057000001 / 08057000002 / 09133333785", whatsapp: "08057000003", icon: "🚔" },
-  { id: 3, name: "Nigerian Army Call Centre", specialty: "Military Anti-Kidnapping Operations", rating: "★ Official", cases: null, verified: true, contact: "193 / 07017222225 / 09060005290 / 08099900131", whatsapp: "07017222225", icon: "⚔️" },
-  { id: 4, name: "Nigerian Army Human Rights", specialty: "Military Misconduct & Abuse Complaints", rating: "★ Official", cases: null, verified: true, contact: "08160134303 / 08161507644", whatsapp: "08160134303", icon: "🪖" },
-  { id: 5, name: "NSCDC Headquarters", specialty: "Civil Defence — Visit nscdc.gov.ng", rating: "★ Official", cases: null, verified: true, contact: "nscdc.gov.ng", whatsapp: null, icon: "🛂" },
+  { id: 1, name: "DSS — Dept. of State Services", specialty: "Intelligence & Counter-Kidnapping", rating: "★ Official", verified: true, contact: "09153391309 / 09153391310 / 09088373514", whatsapp: "09153391309", icon: "🛡️" },
+  { id: 2, name: "Nigeria Police Force CRU", specialty: "Complaint Response Unit — Nationwide", rating: "★ Official", verified: true, contact: "08057000001 / 08057000002 / 09133333785", whatsapp: "08057000003", icon: "🚔" },
+  { id: 3, name: "Nigerian Army Call Centre", specialty: "Military Anti-Kidnapping Operations", rating: "★ Official", verified: true, contact: "193 / 07017222225 / 09060005290 / 08099900131", whatsapp: "07017222225", icon: "⚔️" },
+  { id: 4, name: "Nigerian Army Human Rights", specialty: "Military Misconduct & Abuse Complaints", rating: "★ Official", verified: true, contact: "08160134303 / 08161507644", whatsapp: "08160134303", icon: "🪖" },
+  { id: 5, name: "NSCDC Headquarters", specialty: "Civil Defence Corps Command", rating: "★ Official", verified: true, contact: "09092914164", whatsapp: "09092914164", icon: "🛂" },
+  { id: 6, name: "EFCC — Economic & Financial Crimes Commission", specialty: "Financial Crimes & Ransom Fund Recovery", rating: "★ Official", verified: true, contact: "08093322644 / 099044751", whatsapp: "08093322644", icon: "💰" },
 ];
 function RansomScreen() {
   const [ransomTab, setRansomTab] = useState("active");
@@ -2347,7 +2348,6 @@ function RansomScreen() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ color: "#FFB800", fontWeight: 900, fontSize: 12 }}>★ {a.rating}</div>
-                  <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>{a.cases} cases</div>
                 </div>
               </div>
               {a.verified && <div style={{ display: "inline-flex", gap: 5, alignItems: "center", background: "#00FF8810", border: "1px solid #00FF8833", borderRadius: 6, padding: "3px 8px", fontSize: 10, color: "#00FF88", marginBottom: 10 }}><span>✓</span> Verified by SafeAlert NG</div>}
