@@ -22,6 +22,7 @@ export default function useConvoyTracking({ convoyId, memberId, session, route }
   const lastFixAtRef = useRef(null);
   const stopSinceRef = useRef(null);
   const statusRef = useRef("moving");
+  const stopAlertSentRef = useRef(false);
 
   // Watch GPS position.
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function useConvoyTracking({ convoyId, memberId, session, route }
     if (!convoyId || !memberId) return;
     statusRef.current = "moving";
     stopSinceRef.current = null;
+    stopAlertSentRef.current = false;
 
     const tick = async () => {
       const sample = sampleRef.current;
@@ -80,7 +82,7 @@ export default function useConvoyTracking({ convoyId, memberId, session, route }
 
       const name = session?.user?.user_metadata?.full_name || "A convoy member";
 
-      if (status === "stopped" && prevStatus !== "stopped") {
+      if (status === "stopped" && !stopAlertSentRef.current) {
         await supabase.rpc("log_convoy_event", {
           p_convoy_id: convoyId, p_event_type: "stopped",
           p_lat: sample.lat, p_lng: sample.lng,
@@ -96,6 +98,7 @@ export default function useConvoyTracking({ convoyId, memberId, session, route }
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_ANON_KEY}`, apikey: SUPABASE_ANON_KEY },
           body: JSON.stringify({ convoyId, eventType: "stopped", memberName: name, routeName: route, excludeUserId: session?.user?.id }),
         }).catch(() => {});
+        stopAlertSentRef.current = true;
       } else if (status === "moving" && prevStatus !== "moving") {
         await supabase.rpc("log_convoy_event", {
           p_convoy_id: convoyId, p_event_type: "resumed",
@@ -108,6 +111,8 @@ export default function useConvoyTracking({ convoyId, memberId, session, route }
           message_type: "system",
         });
       }
+
+      if (status === "moving") stopAlertSentRef.current = false;
 
       statusRef.current = status;
     };
