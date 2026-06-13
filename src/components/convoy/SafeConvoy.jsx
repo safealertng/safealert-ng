@@ -74,6 +74,9 @@ export default function SafeConvoy({ session }) {
   const [distressBusy, setDistressBusy] = useState(false);
   const [showDistressConfirm, setShowDistressConfirm] = useState(false);
   const [distressResult, setDistressResult] = useState(null);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leavingConvoy, setLeavingConvoy] = useState(false);
+  const [convoyToast, setConvoyToast] = useState("");
 
   // Start/Join form
   const [destination, setDestination] = useState("");
@@ -155,6 +158,13 @@ export default function SafeConvoy({ session }) {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, []);
+
+  // ── auto-dismiss the "convoy ended / left" toast ──
+  useEffect(() => {
+    if (!convoyToast) return;
+    const t = setTimeout(() => setConvoyToast(""), 4000);
+    return () => clearTimeout(t);
+  }, [convoyToast]);
 
   // ── load the convoy the user is already a member of (if any) ──
   useEffect(() => {
@@ -478,6 +488,46 @@ export default function SafeConvoy({ session }) {
     setDistressResult(null);
   };
 
+  // Leader → ends the convoy for everyone; non-leader → leaves it themselves.
+  const handleEndOrLeaveConvoy = async () => {
+    if (!myConvoy) return;
+    setLeavingConvoy(true);
+    const code = myConvoy.code;
+
+    try {
+      if (isLeader) {
+        await supabase.from("convoy_messages").insert({
+          convoy_id: myConvoy.id, sender_name: "System",
+          message: `🏁 Convoy ${code} has ended. Safe travels!`,
+          message_type: "system",
+        });
+        const { error } = await supabase.from("convoys").update({ status: "completed" }).eq("id", myConvoy.id);
+        if (error) throw error;
+        setConvoyToast("Convoy ended. Stay safe!");
+      } else {
+        const { error } = await supabase
+          .from("convoy_members")
+          .delete()
+          .eq("convoy_id", myConvoy.id)
+          .eq("user_id", session.user.id);
+        if (error) throw error;
+        setConvoyToast("You've left the convoy.");
+      }
+
+      setShowLeaveConfirm(false);
+      setDismissedEventId(null);
+      setDistressSent(false);
+      setDistressResult(null);
+      setMyConvoy(null);
+      setConvoyTab("active");
+    } catch (e) {
+      console.error("[SafeConvoy] end/leave convoy failed:", e);
+      setConvoyToast(`Failed: ${e.message}`);
+    } finally {
+      setLeavingConvoy(false);
+    }
+  };
+
   // Shared "Your Vehicle" card — reused on both the "Start New" and "Join
   // Existing" tabs since they read/write the same vehicleType/vehicleColor/
   // plateNumber state.
@@ -622,6 +672,13 @@ export default function SafeConvoy({ session }) {
                 })}
               </div>
 
+              <button
+                style={{ ...cvS.ghostBtn, border: "1px solid #FF2D2D55", color: "#FF6666", marginBottom: 10 }}
+                onClick={() => setShowLeaveConfirm(true)}
+              >
+                {isLeader ? "🏁 End Convoy" : "🚪 Leave Convoy"}
+              </button>
+
               {!distressSent ? (
                 <button
                   style={cvS.distressBtn(false)}
@@ -681,6 +738,31 @@ export default function SafeConvoy({ session }) {
                 disabled={distressBusy}
               >
                 {distressBusy ? "SENDING..." : "🚨 Yes, Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div style={cvS.modalOverlay} onClick={() => setShowLeaveConfirm(false)}>
+          <div style={cvS.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={cvS.modalTitle}>{isLeader ? "End Convoy?" : "Leave Convoy?"}</div>
+            <div style={cvS.modalText}>
+              {isLeader
+                ? `This will end convoy ${myConvoy?.code} for ALL members. Only do this when your trip is complete.`
+                : `Leave convoy ${myConvoy?.code}? You can rejoin with the code later.`}
+            </div>
+            <div style={cvS.modalActions}>
+              <button style={{ ...cvS.ghostBtn, flex: 1 }} onClick={() => setShowLeaveConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                style={{ ...cvS.distressBtn(false), flex: 1, marginTop: 0 }}
+                onClick={handleEndOrLeaveConvoy}
+                disabled={leavingConvoy}
+              >
+                {leavingConvoy ? "..." : isLeader ? "🏁 Yes, End Convoy" : "🚪 Yes, Leave"}
               </button>
             </div>
           </div>
@@ -888,6 +970,12 @@ export default function SafeConvoy({ session }) {
               );
             })
           )}
+        </div>
+      )}
+
+      {convoyToast && (
+        <div style={cvS.toast}>
+          {convoyToast}
         </div>
       )}
     </div>

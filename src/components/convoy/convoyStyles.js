@@ -97,6 +97,15 @@ export const cvS = {
   modalText: { fontSize: 12, color: "#9aa7c7", lineHeight: 1.6, marginBottom: 18 },
   modalActions: { display: "flex", gap: 10 },
 
+  // Bottom toast — brief confirmation after ending/leaving a convoy.
+  toast: {
+    position: "fixed", left: "50%", bottom: 90, transform: "translateX(-50%)",
+    background: "#11182b", border: "1px solid #2a3654", borderRadius: 12,
+    padding: "10px 18px", color: "#fff", fontSize: 13, fontWeight: 700,
+    boxShadow: "0 6px 24px rgba(0,0,0,0.45)", zIndex: 250,
+    fontFamily: bodyFont, animation: "cvFadeIn 0.2s ease", whiteSpace: "nowrap",
+  },
+
   policeBtn: { width: "100%", background: "linear-gradient(135deg,#0A2540,#08182b)", border: "1px solid #00BFFF44", borderRadius: 10, padding: "12px", color: "#7fd4ff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: headFont, marginBottom: 10, letterSpacing: 0.5 },
 
   distressBtn: (active) => ({
