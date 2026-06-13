@@ -260,12 +260,13 @@ export default function SafeConvoy({ session }) {
         if (mapRef.current._leaflet_id) {
           delete mapRef.current._leaflet_id;
         }
+        const hasFix = tracking.myLocation || myConvoy.start_lat != null;
         const center = tracking.myLocation
           ? [tracking.myLocation.lat, tracking.myLocation.lng]
           : myConvoy.start_lat != null
             ? [myConvoy.start_lat, myConvoy.start_lng]
-            : [9.0765, 7.3986];
-        const map = L.map(mapRef.current).setView(center, 12);
+            : [9.0820, 8.6753];
+        const map = L.map(mapRef.current).setView(center, hasFix ? 12 : 6);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map);
         mapInstanceRef.current = map;
       }
@@ -564,7 +565,9 @@ export default function SafeConvoy({ session }) {
                           {[m.vehicle_color, m.vehicle_type, m.plate_number].filter(Boolean).join(" · ") || "No vehicle info"}
                         </div>
                         <div style={cvS.memberSub}>
-                          {m.lat != null ? `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}` : "No location yet"}
+                          {m.lat != null && (!mine || (tracking.myLocation && !tracking.gpsLost))
+                            ? `${m.lat.toFixed(4)}, ${m.lng.toFixed(4)}`
+                            : "Waiting for GPS..."}
                         </div>
                         {gpsLostFlag && <span style={cvS.gpsLostTag}>GPS LOST</span>}
                       </div>
