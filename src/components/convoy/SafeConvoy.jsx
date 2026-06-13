@@ -34,8 +34,15 @@ const NIGERIAN_STATES = [
   "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-const TABS = [
+const TABS_NO_CONVOY = [
   ["active", "🚗 Active"],
+  ["create", "➕ Start New"],
+  ["join", "🔗 Join Existing"],
+  ["routes", "⚠️ Routes"],
+];
+const TABS_IN_CONVOY = [
+  ["active", "🚗 Active"],
+  ["chat", "💬 Chat"],
   ["join", "➕ Start/Join"],
   ["routes", "⚠️ Routes"],
 ];
@@ -80,9 +87,9 @@ export default function SafeConvoy({ session }) {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
-  const [joinMode, setJoinMode] = useState("create");
   const [joinCode, setJoinCode] = useState("");
   const [joinPin, setJoinPin] = useState("");
+  const [joinHasPin, setJoinHasPin] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [pinPromptConvoy, setPinPromptConvoy] = useState(null);
@@ -137,8 +144,8 @@ export default function SafeConvoy({ session }) {
     );
   }, [dangerRoutes, riskFilter, stateFilter]);
 
-  // Chat tab only makes sense while inside an active convoy.
-  const tabs = myConvoy ? [TABS[0], ["chat", "💬 Chat"], ...TABS.slice(1)] : TABS;
+  // Tab bar differs depending on whether the user is in an active convoy.
+  const tabs = myConvoy ? TABS_IN_CONVOY : TABS_NO_CONVOY;
 
   // ── one-shot geolocation for create/join/nearby ──
   useEffect(() => {
@@ -471,6 +478,36 @@ export default function SafeConvoy({ session }) {
     setDistressResult(null);
   };
 
+  // Shared "Your Vehicle" card — reused on both the "Start New" and "Join
+  // Existing" tabs since they read/write the same vehicleType/vehicleColor/
+  // plateNumber state.
+  const vehicleCard = (
+    <div style={cvS.card}>
+      <div style={cvS.sectionLabel}>Your Vehicle</div>
+      <div style={cvS.fieldWrap}>
+        <label style={cvS.label}>Vehicle Type</label>
+        <select style={cvS.input} value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
+          <option value="">Select vehicle type...</option>
+          {VEHICLE_TYPES.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+        </select>
+      </div>
+      <div style={cvS.fieldWrap}>
+        <label style={cvS.label}>Vehicle Color</label>
+        <input style={cvS.input} value={vehicleColor} onChange={(e) => setVehicleColor(e.target.value)} placeholder="e.g. Black, White, Red" />
+      </div>
+      <div style={{ ...cvS.fieldWrap, marginBottom: 0 }}>
+        <label style={cvS.label}>Plate Number</label>
+        <input
+          style={{ ...cvS.input, ...(plateNumber && !plateValid ? cvS.inputError : {}), textTransform: "uppercase" }}
+          value={plateNumber}
+          onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
+          placeholder="e.g. ABJ 234 EF"
+        />
+        {plateNumber && !plateValid && <div style={cvS.errorText}>Enter a valid Nigerian plate number (e.g. ABJ 234 EF)</div>}
+      </div>
+    </div>
+  );
+
   const handleConfirmRoute = async (routeId) => {
     if (confirmedRoutes.has(routeId)) return;
     setConfirmedRoutes((prev) => new Set(prev).add(routeId));
@@ -507,7 +544,7 @@ export default function SafeConvoy({ session }) {
               <div style={{ textAlign: "center", color: "#7d8bab", fontSize: 12, marginBottom: 14 }}>
                 Start a new convoy or join one with a code to begin live tracking.
               </div>
-              <button style={cvS.primaryBtn} onClick={() => setConvoyTab("join")}>➕ Start or Join a Convoy</button>
+              <button style={cvS.primaryBtn} onClick={() => setConvoyTab("create")}>➕ Start or Join a Convoy</button>
             </div>
           ) : (
             <>
@@ -650,49 +687,20 @@ export default function SafeConvoy({ session }) {
         </div>
       )}
 
-      {convoyTab === "join" && (
-        <div key="join" style={{ padding: "0 16px", ...cvS.fadeIn }}>
+      {convoyTab === "create" && (
+        <div key="create" style={{ padding: "0 16px", ...cvS.fadeIn }}>
           {myConvoy ? (
             <div style={cvS.card}>
               <div style={{ fontWeight: 800, marginBottom: 6, color: "#fff" }}>You're already in convoy {myConvoy.code}</div>
               <div style={{ color: "#7d8bab", fontSize: 12, marginBottom: 12 }}>
-                Finish or leave your current convoy before starting or joining another.
+                Finish or leave your current convoy before starting another.
               </div>
               <button style={cvS.ghostBtn} onClick={() => setConvoyTab("active")}>View Active Convoy</button>
             </div>
           ) : (
             <>
-              <div style={cvS.card}>
-                <div style={cvS.sectionLabel}>Your Vehicle</div>
-                <div style={cvS.fieldWrap}>
-                  <label style={cvS.label}>Vehicle Type</label>
-                  <select style={cvS.input} value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
-                    <option value="">Select vehicle type...</option>
-                    {VEHICLE_TYPES.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-                  </select>
-                </div>
-                <div style={cvS.fieldWrap}>
-                  <label style={cvS.label}>Vehicle Color</label>
-                  <input style={cvS.input} value={vehicleColor} onChange={(e) => setVehicleColor(e.target.value)} placeholder="e.g. Black, White, Red" />
-                </div>
-                <div style={{ ...cvS.fieldWrap, marginBottom: 0 }}>
-                  <label style={cvS.label}>Plate Number</label>
-                  <input
-                    style={{ ...cvS.input, ...(plateNumber && !plateValid ? cvS.inputError : {}), textTransform: "uppercase" }}
-                    value={plateNumber}
-                    onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
-                    placeholder="e.g. ABJ 234 EF"
-                  />
-                  {plateNumber && !plateValid && <div style={cvS.errorText}>Enter a valid Nigerian plate number (e.g. ABJ 234 EF)</div>}
-                </div>
-              </div>
+              {vehicleCard}
 
-              <div style={cvS.tabBar}>
-                <button onClick={() => setJoinMode("create")} style={cvS.tabBtn(joinMode === "create")}>➕ Create New</button>
-                <button onClick={() => setJoinMode("join")} style={cvS.tabBtn(joinMode === "join")}>🔗 Join Existing</button>
-              </div>
-
-              {joinMode === "create" && (
               <div style={cvS.card}>
                 <div style={cvS.sectionLabel}>Start a New Convoy</div>
                 <div style={cvS.fieldWrap}>
@@ -724,22 +732,45 @@ export default function SafeConvoy({ session }) {
                   {creating ? "Creating..." : "🚗 Start New Convoy"}
                 </button>
               </div>
-              )}
+            </>
+          )}
+        </div>
+      )}
 
-              {joinMode === "join" && (
-                <>
+      {convoyTab === "join" && (
+        <div key="join" style={{ padding: "0 16px", ...cvS.fadeIn }}>
+          {myConvoy ? (
+            <div style={cvS.card}>
+              <div style={{ fontWeight: 800, marginBottom: 6, color: "#fff" }}>You're already in convoy {myConvoy.code}</div>
+              <div style={{ color: "#7d8bab", fontSize: 12, marginBottom: 12 }}>
+                Finish or leave your current convoy before joining another.
+              </div>
+              <button style={cvS.ghostBtn} onClick={() => setConvoyTab("active")}>View Active Convoy</button>
+            </div>
+          ) : (
+            <>
+              {vehicleCard}
+
               <div style={cvS.card}>
                 <div style={cvS.sectionLabel}>Join With a Code</div>
                 <div style={cvS.fieldWrap}>
-                  <label style={cvS.label}>Convoy Code</label>
-                  <input style={{ ...cvS.input, textTransform: "uppercase" }} value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="e.g. NGS-4471" />
+                  <label style={cvS.label}>Enter Convoy Code</label>
+                  <input style={{ ...cvS.input, textTransform: "uppercase" }} value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="e.g. NGS-3491" />
                 </div>
-                <div style={cvS.fieldWrap}>
-                  <label style={cvS.label}>PIN (if private)</label>
-                  <input style={cvS.input} inputMode="numeric" value={joinPin} onChange={(e) => setJoinPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="Leave blank if none" />
+                <div style={cvS.toggleRow}>
+                  <span style={{ fontSize: 13, color: "#fff", fontWeight: 600, fontFamily: cvS.bodyFont }}>🔒 This convoy is private (has a PIN)</span>
+                  <button type="button" style={{ ...cvS.toggle(joinHasPin), padding: 0 }} onClick={() => setJoinHasPin((v) => !v)}>
+                    <div style={cvS.toggleKnob(joinHasPin)} />
+                  </button>
                 </div>
+                {joinHasPin && (
+                  <div style={cvS.fieldWrap}>
+                    <label style={cvS.label}>4-Digit PIN</label>
+                    <input style={cvS.input} inputMode="numeric" value={joinPin} onChange={(e) => setJoinPin(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="e.g. 1234" />
+                  </div>
+                )}
                 {joinError && <div style={cvS.errorText}>{joinError}</div>}
-                <button style={{ ...cvS.primaryBtn, marginTop: 4 }} onClick={() => handleJoin(joinCode, joinPin)} disabled={joining || !joinCode.trim()}>
+                <button style={{ ...cvS.primaryBtn, marginTop: 4 }} onClick={() => handleJoin(joinCode, joinHasPin ? joinPin : null)} disabled={joining || !joinCode.trim()}>
                   {joining ? "Joining..." : "🔗 Join Convoy"}
                 </button>
               </div>
@@ -802,8 +833,6 @@ export default function SafeConvoy({ session }) {
                   ))
                 )}
               </div>
-                </>
-              )}
             </>
           )}
         </div>
