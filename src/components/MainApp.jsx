@@ -46,6 +46,11 @@ const NEARBY_ALERTS = [
 // Detects raw "lat, lng" strings (e.g. "9.0765, 7.3986") so they're never shown as a location.
 const COORD_PAIR_RE = /^-?\d+\.\d+,\s*-?\d+\.\d+$/;
 
+// 0,0 ("null island") means no GPS fix was captured — treat it the same as missing.
+const hasGpsFix = (lat, lng) => lat != null && lng != null && !(lat === 0 && lng === 0);
+const sanitizeCoords = (coords) =>
+  hasGpsFix(coords?.lat, coords?.lng) ? { lat: coords.lat, lng: coords.lng } : { lat: null, lng: null };
+
 const STATES = [
   { state: "Abia", zone: "South East", police: { command: "Abia State Police Command", number: "08033418481", commissioner: "CP Danladi Mamman" }, agencies: [{ name: "NSCDC Abia", number: "08036673645", icon: "⚔️" }, { name: "DSS Abia", number: "08033001234", icon: "🛡️" }, { name: "FRSC Abia", number: "08039483333", icon: "🚦" }, { name: "Fire Service Aba", number: "08034567890", icon: "🔥" }, { name: "FMC Umuahia", number: "08037654321", icon: "🏥" }, { name: "NDLEA Abia", number: "08033100001", icon: "💊" }, { name: "NEMA Abia", number: "08033200001", icon: "🆘" }, { name: "Nigerian Red Cross Abia", number: "08033300001", icon: "🏨" }, { name: "NIS Immigration Abia", number: "08033400001", icon: "🛂" }, { name: "Customs Abia", number: "08033500001", icon: "🏛️" }] },
   { state: "Adamawa", zone: "North East", police: { command: "Adamawa State Police Command", number: "08033456789", commissioner: "CP Sikiru Akande" }, agencies: [{ name: "NSCDC Adamawa", number: "08036674567", icon: "⚔️" }, { name: "DSS Adamawa", number: "08033002345", icon: "🛡️" }, { name: "FRSC Adamawa", number: "08039484444", icon: "🚦" }, { name: "SEMA Adamawa", number: "08035678901", icon: "🆘" }, { name: "Specialist Hospital Yola", number: "08037665432", icon: "🏥" }, { name: "NDLEA Adamawa", number: "08033100002", icon: "💊" }, { name: "NEMA Adamawa", number: "08033200002", icon: "🆘" }, { name: "Nigerian Red Cross Adamawa", number: "08033300002", icon: "🏨" }, { name: "NIS Immigration Adamawa", number: "08033400002", icon: "🛂" }, { name: "Customs Adamawa", number: "08033500002", icon: "🏛️" }] },
@@ -134,8 +139,8 @@ export default function MainApp({ session }) {
   const [familyMembers, setFamilyMembers] = useState([]);
   const [userLocation, setUserLocation] = useState("Locating...");
   const userLocationRef = useRef("Locating...");
-  const [userCoords, setUserCoords] = useState(null);
   const userCoordsRef = useRef(null);
+  const [locationNotice, setLocationNotice] = useState(null);
   const mimeTypeRef = useRef("video/webm");
   const shakeSOS = useShakeToSOS(session);
   const [shakeStatusMsg, setShakeStatusMsg] = useState(null);
@@ -169,7 +174,6 @@ export default function MainApp({ session }) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-          setUserCoords({ lat: latitude, lng: longitude });
           userCoordsRef.current = { lat: latitude, lng: longitude };
           try {
             const res = await fetch(
@@ -632,12 +636,13 @@ export default function MainApp({ session }) {
           if (uploadError) { console.error("Upload error:", uploadError); return; }
           const { data: urlData } = supabase.storage.from("incident-videos").getPublicUrl(fileName);
           console.log("Video uploaded:", urlData.publicUrl);
+          const broadcastCoords = sanitizeCoords(userCoordsRef.current);
           const { error: dbError } = await supabase.from("incidents").insert({
             reporter_id: userId,
             type: "other",
             description: `Live panic broadcast — ${new Date().toLocaleString("en-NG")}`,
-            lat: userCoordsRef.current?.lat || 0,
-            lng: userCoordsRef.current?.lng || 0,
+            lat: broadcastCoords.lat,
+            lng: broadcastCoords.lng,
             state: userLocationRef.current && userLocationRef.current !== "Locating..." ? userLocationRef.current : "Unknown",
             status: "active",
             video_url: urlData.publicUrl,
@@ -868,40 +873,60 @@ export default function MainApp({ session }) {
     return () => supabase.removeChannel(channel);
   }, []);
 
-  const startBroadcast = async () => {
+  // Resolves the user's GPS position, waiting up to 10s for a fix. Returns
+  // {lat:null,lng:null} (and surfaces a locationNotice) if one isn't available.
+  const ensureGpsFix = async () => {
+    const cached = sanitizeCoords(userCoordsRef.current);
+    if (cached.lat != null) return cached;
+    if (!navigator.geolocation) {
+      setLocationNotice("Location unavailable — report will be submitted without exact location");
+      setTimeout(() => setLocationNotice(null), 4000);
+      return { lat: null, lng: null };
+    }
+    setLocationNotice("Getting your location... please wait");
+    const pos = await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve(p),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+    const resolved = pos
+      ? sanitizeCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+      : { lat: null, lng: null };
+    if (resolved.lat != null) {
+      userCoordsRef.current = resolved;
+      setLocationNotice(null);
+      return resolved;
+    }
+    setLocationNotice("Location unavailable — report will be submitted without exact location");
+    setTimeout(() => setLocationNotice(null), 4000);
+    return resolved;
+  };
+
+  const startBroadcast = async (preResolvedCoords) => {
+    const coords = preResolvedCoords ?? await ensureGpsFix();
+    const currentLocation = coords.lat != null ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : "Unknown";
     try {
-      if (navigator.geolocation && (!userCoords || userLocation === "Locating...")) {
-        await new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-              const { latitude, longitude } = pos.coords;
-              setUserCoords({ lat: latitude, lng: longitude });
-              userCoordsRef.current = { lat: latitude, lng: longitude };
-              try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
-                const data = await res.json();
-                const city = data.address?.city || data.address?.town || data.address?.village || "";
-                const state = data.address?.state || "";
-                const loc = city && state ? `${city}, ${state}` : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-                setUserLocation(loc);
-                userLocationRef.current = loc;
-              } catch (err) {
-                const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-                setUserLocation(fallback);
-                userLocationRef.current = fallback;
-              }
-              resolve(null);
-            },
-            () => resolve(null),
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
-        });
+      if (coords.lat != null && userLocation === "Locating...") {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json&accept-language=en`, { headers: { "User-Agent": "SafeAlertNG/1.0" } });
+          const data = await res.json();
+          const city = data.address?.city || data.address?.town || data.address?.village || "";
+          const state = data.address?.state || "";
+          const loc = city && state ? `${city}, ${state}` : `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+          setUserLocation(loc);
+          userLocationRef.current = loc;
+        } catch {
+          const fallback = `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
+          setUserLocation(fallback);
+          userLocationRef.current = fallback;
+        }
       }
-      const currentLocation = userCoordsRef.current ? `${userCoordsRef.current.lat.toFixed(4)}, ${userCoordsRef.current.lng.toFixed(4)}` : "Unknown";
       await supabase.from("panic_events").insert({
         user_id: session?.user?.id,
-        lat: userCoords?.lat || 0,
-        lng: userCoords?.lng || 0,
+        lat: coords.lat,
+        lng: coords.lng,
         state: currentLocation,
         police_notified: true,
         resolved: false
@@ -912,7 +937,7 @@ export default function MainApp({ session }) {
       if ('serviceWorker' in navigator && Notification.permission === 'granted') {
         const reg = await navigator.serviceWorker.ready;
         reg.showNotification('🚨 PANIC ALERT — SafeAlertNG', {
-          body: `Emergency at ${currentLocation}. Maps: https://maps.google.com/?q=${userCoordsRef.current?.lat},${userCoordsRef.current?.lng}`,
+          body: `Emergency at ${currentLocation}. Maps: https://maps.google.com/?q=${coords.lat},${coords.lng}`,
           icon: '/favicon.svg',
           vibrate: [200, 100, 200, 100, 200],
           requireInteraction: true,
@@ -943,8 +968,8 @@ export default function MainApp({ session }) {
       body: JSON.stringify({
         userId: session?.user?.id,
         userName: session?.user?.user_metadata?.full_name,
-        lat: userCoordsRef.current?.lat,
-        lng: userCoordsRef.current?.lng,
+        lat: coords.lat,
+        lng: coords.lng,
         location: userLocationRef.current,
       }),
     }).catch(e => console.error("Family panic alert error:", e));
@@ -1088,6 +1113,11 @@ export default function MainApp({ session }) {
   if (panicStage === "active") return (
     <Shell shakeFlash={false}>
       <div style={S.liveBar}><Blink /><span style={{ color: "#FF2D2D", fontWeight: 900, letterSpacing: 3, fontSize: 12 }}>LIVE BROADCAST</span><span style={{ marginLeft: "auto", fontFamily: "monospace", color: "#555", fontSize: 11 }}>{fmt(recordTime)}</span></div>
+      {locationNotice && (
+        <div style={{ margin: "10px 16px 0", background: "#FFB80014", border: "1px solid #FFB80044", borderRadius: 10, padding: "10px 14px", color: "#FFB800", fontSize: 12, fontWeight: 700 }}>
+          {locationNotice.startsWith("Getting") ? "⏳" : "⚠️"} {locationNotice}
+        </div>
+      )}
       <VideoBox pct={uploadPct} videoRef={agoraVideoRef} stream={stream} time={recordTime} label="📹 Broadcasting to authorities..." fmt={fmt} />
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="EMERGENCY DISPATCHED" sub="Police + all family members notified with live GPS" />}
@@ -1134,6 +1164,11 @@ export default function MainApp({ session }) {
   if (nav === "report" && reportStage === "live") return (
     <Shell shakeFlash={false}>
       <TopBar title="LIVE REPORT" onBack={endBroadcast} />
+      {locationNotice && (
+        <div style={{ margin: "10px 16px 0", background: "#FFB80014", border: "1px solid #FFB80044", borderRadius: 10, padding: "10px 14px", color: "#FFB800", fontSize: 12, fontWeight: 700 }}>
+          {locationNotice.startsWith("Getting") ? "⏳" : "⚠️"} {locationNotice}
+        </div>
+      )}
       <VideoBox pct={uploadPct} stream={stream} time={recordTime} label={`📹 ${selectedIncident?.label || "Recording..."}`} fmt={fmt} />
       <UpBar pct={uploadPct} />
       {dispatched && <OKBox title="REPORT SUBMITTED" sub="Authorities & community watch notified" />}
@@ -1211,16 +1246,22 @@ export default function MainApp({ session }) {
           }} />
         </div>
       </div>
+      {locationNotice && (
+        <div style={{ margin: "0 16px 12px", background: "#FFB80014", border: "1px solid #FFB80044", borderRadius: 10, padding: "10px 14px", color: "#FFB800", fontSize: 12, fontWeight: 700 }}>
+          {locationNotice.startsWith("Getting") ? "⏳" : "⚠️"} {locationNotice}
+        </div>
+      )}
       <button onClick={async () => {
+        const coords = await ensureGpsFix();
         setReportStage("live");
-        startBroadcast();
+        startBroadcast(coords);
         try {
           await supabase.from("incidents").insert({
             reporter_id: session?.user?.id,
             type: selectedIncident?.id,
             description: "",
-            lat: userCoords?.lat || 0,
-            lng: userCoords?.lng || 0,
+            lat: coords.lat,
+            lng: coords.lng,
             state: userLocation || "Unknown",
             status: "active"
           });
@@ -2515,7 +2556,7 @@ function LiveAlertsScreen({ session, isAdminUser }) {
   const resolvedIdsRef = useRef(new Set());
   useEffect(() => () => { unmountedRef.current = true; }, []);
   useEffect(() => {
-    const pending = incidents.filter(inc => inc.lat && inc.lng && inc.lat !== 0 && !resolvedIdsRef.current.has(inc.id));
+    const pending = incidents.filter(inc => hasGpsFix(inc.lat, inc.lng) && !resolvedIdsRef.current.has(inc.id));
     if (pending.length === 0) return;
     pending.forEach(inc => resolvedIdsRef.current.add(inc.id));
     (async () => {
@@ -2664,7 +2705,7 @@ function LiveAlertsScreen({ session, isAdminUser }) {
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: col + "18", border: `1px solid ${col}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: 13, color: "#ddd" }}>{TYPE_LABELS[inc.type] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-                        <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>📍 {inc.lat && inc.lng && inc.lat !== 0 ? (locationNames[inc.id] || "Locating…") : (inc.state && !COORD_PAIR_RE.test(inc.state) ? inc.state : "Unknown location")}</div>
+                        <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>📍 {hasGpsFix(inc.lat, inc.lng) ? (locationNames[inc.id] || "Locating…") : "Location unavailable"}</div>
                       </div>
                     </div>
                     <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: "3px 8px", borderRadius: 4, background: isActive ? "#FF2D2D18" : "#00FF8818", color: isActive ? "#FF2D2D" : "#00FF88", border: `1px solid ${isActive ? "#FF2D2D44" : "#00FF8844"}`, flexShrink: 0 }}>{inc.status?.toUpperCase()}</span>
