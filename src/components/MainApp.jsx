@@ -1931,7 +1931,7 @@ export default function MainApp({ session }) {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: a.status === "active" ? "#FF2D2D" : "#00FF88", marginTop: 4, flexShrink: 0, boxShadow: `0 0 5px ${a.status === "active" ? "#FF2D2D" : "#00FF88"}` }} />
             <div>
               <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{a.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-              <div style={{ color: "#444", fontSize: 11 }}>📍 {COORD_PAIR_RE.test(a.state) ? "Unknown location" : a.state} · {new Date(a.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
+              <div style={{ color: "#444", fontSize: 11 }}>{COORD_PAIR_RE.test(a.state) ? "📍 Location Private" : `📍 ${a.state}`} · {new Date(a.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
             </div>
           </div>
         )) : NEARBY_ALERTS.slice(0, 2).map(a => (
@@ -2705,7 +2705,7 @@ function LiveAlertsScreen({ session, isAdminUser }) {
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: col + "18", border: `1px solid ${col}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{icon}</div>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: 13, color: "#ddd" }}>{TYPE_LABELS[inc.type] || inc.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-                        <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>📍 {hasGpsFix(inc.lat, inc.lng) ? (locationNames[inc.id] || "Locating…") : "Location unavailable"}</div>
+                        <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>{hasGpsFix(inc.lat, inc.lng) ? `📍 ${locationNames[inc.id] || "Locating…"}` : (isAdminUser || inc.reporter_id === session?.user?.id ? "📍 Location unavailable" : "📍 Location Private")}</div>
                       </div>
                     </div>
                     <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: "3px 8px", borderRadius: 4, background: isActive ? "#FF2D2D18" : "#00FF8818", color: isActive ? "#FF2D2D" : "#00FF88", border: `1px solid ${isActive ? "#FF2D2D44" : "#00FF8844"}`, flexShrink: 0 }}>{inc.status?.toUpperCase()}</span>
