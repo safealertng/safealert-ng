@@ -858,7 +858,9 @@ export default function MainApp({ session }) {
       .channel("nearby-alerts")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
         (payload) => setNearbyAlerts(prev => [
-          isAdminUserRef.current ? payload.new : { ...payload.new, lat: null, lng: null },
+          isAdminUserRef.current || payload.new.reporter_id === session?.user?.id
+            ? payload.new
+            : { ...payload.new, lat: null, lng: null },
           ...prev.slice(0, 4)
         ])
       )
@@ -2492,7 +2494,11 @@ function LiveAlertsScreen({ session, isAdminUser }) {
   const [userCoords, setUserCoords] = useState(null);
   const [locationNames, setLocationNames] = useState({});
   const isAdminUserRef = useRef(isAdminUser);
-  useEffect(() => { isAdminUserRef.current = isAdminUser; }, [isAdminUser]);
+  const sessionUserIdRef = useRef(session?.user?.id);
+  useEffect(() => {
+    isAdminUserRef.current = isAdminUser;
+    sessionUserIdRef.current = session?.user?.id;
+  }, [isAdminUser, session?.user?.id]);
 
 
 
@@ -2554,7 +2560,9 @@ function LiveAlertsScreen({ session, isAdminUser }) {
       .channel("incidents-feed")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
         (payload) => {
-          const incoming = isAdminUserRef.current ? payload.new : { ...payload.new, lat: null, lng: null };
+          const incoming = isAdminUserRef.current || payload.new.reporter_id === sessionUserIdRef.current
+            ? payload.new
+            : { ...payload.new, lat: null, lng: null };
           setIncidents(prev => [incoming, ...prev]); setNewAlert(true); setTimeout(() => setNewAlert(false), 5000);
         }
       )
