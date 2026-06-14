@@ -367,6 +367,9 @@ export default function AdminDashboard({ session, onBack }) {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{inc.type?.replace(/_/g, " ").toUpperCase()}</div>
                   <div style={{ color: "#555", fontSize: 11 }}>📍 {inc.state} · {new Date(inc.created_at).toLocaleString("en-NG")}</div>
+                  {inc.lat != null && inc.lng != null && (
+                    <div style={{ color: "#444", fontSize: 10 }}>GPS: {Number(inc.lat).toFixed(4)}, {Number(inc.lng).toFixed(4)}</div>
+                  )}
                   {inc.description && <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>{inc.description}</div>}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

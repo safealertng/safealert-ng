@@ -126,6 +126,7 @@ export default function MainApp({ session }) {
   const [userPlan, setUserPlan] = useState("freemium");
   const [planExpired, setPlanExpired] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const isAdminUserRef = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem("safealert_onboarded");
   });
@@ -264,7 +265,7 @@ export default function MainApp({ session }) {
     checkSubscription();
     const checkAdmin = async () => {
       const adminCheck = await supabase.from("admin_roles").select("role").eq("user_id", session?.user?.id);
-      if (adminCheck?.data && adminCheck.data.length > 0) setIsAdminUser(true);
+      if (adminCheck?.data && adminCheck.data.length > 0) { setIsAdminUser(true); isAdminUserRef.current = true; }
     };
     checkAdmin();
   }, [session]);
@@ -847,7 +848,7 @@ export default function MainApp({ session }) {
 
   useEffect(() => {
     const fetchNearbyAlerts = async (filter = "nearby") => {
-      let query = supabase.from("incidents").select("*").order("created_at", { ascending: false }).limit(5);
+      let query = supabase.from("incidents_public").select("*").order("created_at", { ascending: false }).limit(5);
       if (filter === "state") query = query.eq("state", session?.user?.user_metadata?.state || "Lagos");
       const { data, error } = await query;
       if (!error && data) setNearbyAlerts(data);
@@ -856,7 +857,10 @@ export default function MainApp({ session }) {
     const channel = supabase
       .channel("nearby-alerts")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
-        (payload) => setNearbyAlerts(prev => [payload.new, ...prev.slice(0, 4)])
+        (payload) => setNearbyAlerts(prev => [
+          isAdminUserRef.current ? payload.new : { ...payload.new, lat: null, lng: null },
+          ...prev.slice(0, 4)
+        ])
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
@@ -1478,7 +1482,7 @@ export default function MainApp({ session }) {
   if (nav === "alerts") return (
     <Shell shakeFlash={false}>
       <TopBar title="COMMUNITY ALERTS" onBack={() => setNav("home")} />
-      <LiveAlertsScreen session={session} />
+      <LiveAlertsScreen session={session} isAdminUser={isAdminUser} />
     </Shell>
   );
 
@@ -1862,7 +1866,7 @@ export default function MainApp({ session }) {
             <button key={f} onClick={() => {
               setAlertsFilter(f);
               const fetchFiltered = async () => {
-                let query = supabase.from("incidents").select("*").order("created_at", { ascending: false }).limit(5);
+                let query = supabase.from("incidents_public").select("*").order("created_at", { ascending: false }).limit(5);
                 if (f === "state") query = query.eq("state", session?.user?.user_metadata?.state || "Lagos");
                 const { data, error } = await query;
                 if (!error && data) setNearbyAlerts(data);
@@ -2478,7 +2482,7 @@ function NewsScreen2() { } // placeholder
 // lookups (and re-renders) don't hammer the Nominatim API.
 const incidentLocationCache = new Map();
 
-function LiveAlertsScreen({ session }) {
+function LiveAlertsScreen({ session, isAdminUser }) {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -2487,6 +2491,8 @@ function LiveAlertsScreen({ session }) {
   const [newAlert, setNewAlert] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
   const [locationNames, setLocationNames] = useState({});
+  const isAdminUserRef = useRef(isAdminUser);
+  useEffect(() => { isAdminUserRef.current = isAdminUser; }, [isAdminUser]);
 
 
 
@@ -2536,7 +2542,7 @@ function LiveAlertsScreen({ session }) {
   useEffect(() => {
     const fetchIncidents = async () => {
       const { data, error } = await supabase
-        .from("incidents")
+        .from("incidents_public")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
@@ -2547,7 +2553,10 @@ function LiveAlertsScreen({ session }) {
     const channel = supabase
       .channel("incidents-feed")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
-        (payload) => { setIncidents(prev => [payload.new, ...prev]); setNewAlert(true); setTimeout(() => setNewAlert(false), 5000); }
+        (payload) => {
+          const incoming = isAdminUserRef.current ? payload.new : { ...payload.new, lat: null, lng: null };
+          setIncidents(prev => [incoming, ...prev]); setNewAlert(true); setTimeout(() => setNewAlert(false), 5000);
+        }
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
@@ -2913,7 +2922,7 @@ function NewsScreen({ session }) {
   useEffect(() => {
     const fetchIncidents = async () => {
       const { data } = await supabase
-        .from("incidents")
+        .from("incidents_public")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(20);
@@ -3173,7 +3182,7 @@ function HeatMapScreen() {
   useEffect(() => {
     const fetchLiveIncidents = async () => {
       const { data, error } = await supabase
-        .from("incidents")
+        .from("incidents_public")
         .select("state, status")
         .eq("status", "active");
       if (!error && data) {
