@@ -43,3 +43,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/send-family-panic-alert/deno.json"
 entrypoint = "./functions/send-family-panic-alert/index.ts"
+
+[functions.send-incident-status-notification]
+enabled = true
+verify_jwt = false
+import_map = "./functions/send-incident-status-notification/deno.json"
+entrypoint = "./functions/send-incident-status-notification/index.ts"

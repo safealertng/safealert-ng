@@ -29,6 +29,10 @@ export default function AdminDashboard({ session, onBack }) {
   const [subscribers, setSubscribers] = useState([]);
   const [dau, setDau] = useState(0);
   const [betaTesters, setBetaTesters] = useState([]);
+  const [incidentFilter, setIncidentFilter] = useState("all");
+  const [resolveModalId, setResolveModalId] = useState(null);
+  const [resolutionNote, setResolutionNote] = useState("");
+  const [now, setNow] = useState(() => Date.now());
 
   const showToast = (msg, color = "#00FF88") => {
     setToast({ msg, color });
@@ -54,6 +58,12 @@ export default function AdminDashboard({ session, onBack }) {
     if (!adminRole) return;
     fetchAll();
   }, [adminRole]);
+
+  // Tick the clock every minute so "expiring soon" badges stay current
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -102,10 +112,16 @@ export default function AdminDashboard({ session, onBack }) {
     setLoading(false);
   };
 
-  const updateIncidentStatus = async (id, status) => {
-    await supabase.from("incidents").update({ status }).eq("id", id);
-    setIncidents(prev => prev.map(i => i.id === id ? { ...i, status } : i));
-    showToast(`Incident marked as ${status}`);
+  const markIncidentResolved = async (id, note) => {
+    const { data, error } = await supabase.rpc("mark_incident_resolved", { p_incident_id: id, p_note: note?.trim() || null });
+    if (error || !data?.success) {
+      showToast(data?.error || error?.message || "Failed to resolve incident", "#FF2D2D");
+      return;
+    }
+    setIncidents(prev => prev.map(i => i.id === id ? { ...i, status: "resolved", resolved_at: new Date().toISOString(), resolution_note: note?.trim() || null } : i));
+    showToast("Incident marked as resolved");
+    setResolveModalId(null);
+    setResolutionNote("");
   };
 
   const banUser = async (userId) => {
@@ -174,6 +190,26 @@ export default function AdminDashboard({ session, onBack }) {
 
       {/* Toast */}
       {toast && <div style={{ ...A.toast, background: toast.color }}>{toast.msg}</div>}
+
+      {/* Resolve incident modal */}
+      {resolveModalId && (
+        <div style={A.modalOverlay} onClick={() => { setResolveModalId(null); setResolutionNote(""); }}>
+          <div style={A.modalCard} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 10, color: "#fff" }}>Mark Incident Resolved</div>
+            <textarea
+              value={resolutionNote}
+              onChange={e => setResolutionNote(e.target.value)}
+              placeholder="Resolution note (optional)"
+              rows={3}
+              style={{ ...A.input, resize: "vertical" }}
+            />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => { setResolveModalId(null); setResolutionNote(""); }} style={{ ...A.smBtn, flex: 1, padding: "10px", fontSize: 12 }}>Cancel</button>
+              <button onClick={() => markIncidentResolved(resolveModalId, resolutionNote)} style={{ flex: 1, background: "#00FF8820", border: "1px solid #00FF88", borderRadius: 8, padding: "10px", color: "#00FF88", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif" }}>✅ Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={A.header}>
@@ -362,7 +398,16 @@ export default function AdminDashboard({ session, onBack }) {
         {nav === "incidents" && (
           <div>
             <div style={A.sectionTitle}>ALL INCIDENTS — {incidents.length} TOTAL</div>
-            {incidents.map(inc => (
+            <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+              {[["all", "All"], ["active", "Active"], ["pending_review", "Pending Review"], ["resolved", "Resolved"]].map(([v, l]) => (
+                <button key={v} onClick={() => setIncidentFilter(v)} style={{ flexShrink: 0, borderRadius: 20, padding: "5px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Barlow Condensed', sans-serif", background: incidentFilter === v ? "#FF2D2D" : "transparent", color: incidentFilter === v ? "#fff" : "#555", border: `1px solid ${incidentFilter === v ? "#FF2D2D" : "#333"}` }}>{l}</button>
+              ))}
+            </div>
+            {incidents.filter(inc => incidentFilter === "all" || inc.status === incidentFilter).map(inc => {
+              const expiringSoon = inc.status === "active" && inc.auto_resolve_at
+                && new Date(inc.auto_resolve_at).getTime() - now <= 24 * 60 * 60 * 1000
+                && new Date(inc.auto_resolve_at).getTime() - now > 0;
+              return (
               <div key={inc.id} style={A.row}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{inc.type?.replace(/_/g, " ").toUpperCase()}</div>
@@ -371,11 +416,27 @@ export default function AdminDashboard({ session, onBack }) {
                     <div style={{ color: "#444", fontSize: 10 }}>GPS: {Number(inc.lat).toFixed(4)}, {Number(inc.lng).toFixed(4)}</div>
                   )}
                   {inc.description && <div style={{ color: "#444", fontSize: 10, marginTop: 2 }}>{inc.description}</div>}
+                  {inc.status === "resolved" && inc.resolution_note && (
+                    <div style={{ color: "#00FF88", fontSize: 10, marginTop: 4 }}>Note: {inc.resolution_note}</div>
+                  )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <div style={{ ...A.badge, background: inc.status === "active" ? "#FF2D2D22" : "#00FF8822", color: inc.status === "active" ? "#FF2D2D" : "#00FF88", border: `1px solid ${inc.status === "active" ? "#FF2D2D44" : "#00FF8844"}` }}>{inc.status?.toUpperCase()}</div>
-                  {(adminRole === "super_admin" || adminRole === "admin" || adminRole === "moderator") && inc.status === "active" && (
-                    <button onClick={() => updateIncidentStatus(inc.id, "resolved")} style={{ ...A.smBtn, color: "#00FF88", borderColor: "#00FF8844", fontSize: 9 }}>✓ Resolve</button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {inc.status === "resolved" && (
+                      <div style={{ ...A.badge, background: "#00FF8822", color: "#00FF88", border: "1px solid #00FF8844" }}>✅ RESOLVED</div>
+                    )}
+                    {inc.status === "pending_review" && (
+                      <div style={{ ...A.badge, background: "#FF2D2D22", color: "#FF2D2D", border: "1px solid #FF2D2D44" }}>🔴 PENDING REVIEW</div>
+                    )}
+                    {(inc.status === "active" || inc.status === "false_report") && (
+                      <div style={{ ...A.badge, background: inc.status === "active" ? "#FF2D2D22" : "#55555522", color: inc.status === "active" ? "#FF2D2D" : "#888", border: `1px solid ${inc.status === "active" ? "#FF2D2D44" : "#55555544"}` }}>{inc.status.toUpperCase().replace("_", " ")}</div>
+                    )}
+                    {expiringSoon && (
+                      <div style={{ ...A.badge, background: "#FFB80022", color: "#FFB800", border: "1px solid #FFB80044" }}>⏱️ EXPIRING SOON</div>
+                    )}
+                  </div>
+                  {(adminRole === "super_admin" || adminRole === "admin" || adminRole === "moderator") && inc.status !== "resolved" && (
+                    <button onClick={() => setResolveModalId(inc.id)} style={{ ...A.smBtn, color: "#00FF88", borderColor: "#00FF8844", fontSize: 9 }}>✅ Mark as Resolved</button>
                   )}
                   {inc.video_url && (adminRole === "super_admin" || adminRole === "admin") && (
                     <button onClick={async () => {
@@ -390,7 +451,8 @@ const fileName = pathParts[1] || inc.video_url.split("/").pop();
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -617,6 +679,8 @@ const A = {
   center: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#080808", fontFamily: "'Barlow Condensed', sans-serif", color: "#fff" },
   spinner: { width: 32, height: 32, border: "3px solid #FF2D2D22", borderTop: "3px solid #FF2D2D", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
   toast: { position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", color: "#000", fontWeight: 900, fontSize: 12, padding: "8px 20px", borderRadius: 20, zIndex: 999, whiteSpace: "nowrap" },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 },
+  modalCard: { background: "#111", border: "1px solid #222", borderRadius: 12, padding: 20, width: "100%", maxWidth: 360 },
 };
 
 const ACSS = `

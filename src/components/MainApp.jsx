@@ -2550,6 +2550,7 @@ function LiveAlertsScreen({ session, isAdminUser }) {
   const [newAlert, setNewAlert] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
   const [locationNames, setLocationNames] = useState({});
+  const [showResolved, setShowResolved] = useState(false);
 
 
   const TYPE_LABELS = { kidnapping: "Kidnapping", kidnapping_attempt: "Kidnapping Attempt", robbery: "Armed Robbery", armed_robbery: "Armed Robbery", suspicious: "Suspicious Activity", suspicious_activity: "Suspicious Activity", suspicious_vehicle: "Suspicious Vehicle", attack: "Physical Attack", physical_attack: "Physical Attack", vehicle: "Suspect Vehicle", banditry: "Banditry", terrorism: "Terror Activity", other: "Other Threat" };
@@ -2650,15 +2651,17 @@ function LiveAlertsScreen({ session, isAdminUser }) {
     lat: null, lng: null, description: ""
   }))];
 
-  const filtered = allIncidents.filter(inc => {
+  const filteredBase = allIncidents.filter(inc => {
     const matchSearch = search === "" || (inc.type?.toLowerCase().includes(search.toLowerCase()) || inc.state?.toLowerCase().includes(search.toLowerCase()));
     const matchType = filterType === "all" || inc.type === filterType;
     const matchState = filterState === "all" || inc.state?.toLowerCase().includes(filterState.toLowerCase());
     return matchSearch && matchType && matchState;
   });
 
-  const activeCount = filtered.filter(i => i.status === "active").length;
-  const resolvedCount = filtered.filter(i => i.status === "resolved").length;
+  const activeCount = filteredBase.filter(i => i.status === "active").length;
+  const resolvedCount = filteredBase.filter(i => i.status === "resolved").length;
+
+  const filtered = filteredBase.filter(inc => showResolved || inc.status !== "resolved");
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
@@ -2675,12 +2678,17 @@ function LiveAlertsScreen({ session, isAdminUser }) {
         </div>
       )}
       <div style={{ display: "flex", gap: 8, padding: "12px 16px 0" }}>
-        {[[activeCount, "Active", "#FF2D2D"], [resolvedCount, "Resolved", "#00FF88"], [filtered.length, "Total", "#FFB800"]].map(([n, l, c]) => (
+        {[[activeCount, "Active", "#FF2D2D"], [resolvedCount, "Resolved", "#00FF88"], [filteredBase.length, "Total", "#FFB800"]].map(([n, l, c]) => (
           <div key={l} style={{ flex: 1, background: "#0d0d0d", border: `1px solid ${c}22`, borderRadius: 10, padding: "10px 6px", textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: c }}>{n}</div>
             <div style={{ fontSize: 9, color: "#444", fontFamily: "monospace", marginTop: 1 }}>{l}</div>
           </div>
         ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 16px 0" }}>
+        <button onClick={() => setShowResolved(s => !s)} style={{ display: "flex", alignItems: "center", gap: 6, background: showResolved ? "#00FF8822" : "#0d0d0d", border: `1px solid ${showResolved ? "#00FF8855" : "#1a1a1a"}`, borderRadius: 20, padding: "5px 12px", fontSize: 11, fontWeight: 700, color: showResolved ? "#00FF88" : "#555", cursor: "pointer", fontFamily: "'Barlow Condensed',sans-serif" }}>
+          {showResolved ? "☑" : "☐"} Show resolved
+        </button>
       </div>
       <div style={{ margin: "12px 16px 0", background: "#0d0d0d", border: "1px solid #1a1a1a", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ color: "#444" }}>🔍</span>
@@ -2714,6 +2722,12 @@ function LiveAlertsScreen({ session, isAdminUser }) {
             const col = TYPE_COLORS[inc.type] || "#555";
             const icon = TYPE_ICONS[inc.type] || "📢";
             const isActive = inc.status === "active";
+            const statusBadge = {
+              active: { bg: "#FF2D2D18", color: "#FF2D2D", border: "#FF2D2D44", label: "ACTIVE" },
+              resolved: { bg: "#00FF8818", color: "#00FF88", border: "#00FF8844", label: "✅ RESOLVED" },
+              pending_review: { bg: "#FFB80018", color: "#FFB800", border: "#FFB80044", label: "🔴 PENDING REVIEW" },
+              false_report: { bg: "#55555518", color: "#888", border: "#55555544", label: "FALSE REPORT" },
+            }[inc.status] || { bg: "#00FF8818", color: "#00FF88", border: "#00FF8844", label: inc.status?.toUpperCase() };
             return (
               <div key={inc.id} style={{ background: "#0a0a0a", border: `1px solid ${isActive ? "#FF2D2D22" : "#161616"}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
                 {isActive && <div style={{ height: 2, background: "linear-gradient(90deg,#FF2D2D,#FF6B00)" }} />}
@@ -2726,7 +2740,7 @@ function LiveAlertsScreen({ session, isAdminUser }) {
                         <div style={{ color: "#555", fontSize: 11, marginTop: 2 }}>{hasGpsFix(inc.lat, inc.lng) ? `📍 ${locationNames[inc.id] || "Locating…"}` : (isAdminUser || inc.reporter_id === session?.user?.id ? "📍 Location unavailable" : "📍 Location Private")}</div>
                       </div>
                     </div>
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: "3px 8px", borderRadius: 4, background: isActive ? "#FF2D2D18" : "#00FF8818", color: isActive ? "#FF2D2D" : "#00FF88", border: `1px solid ${isActive ? "#FF2D2D44" : "#00FF8844"}`, flexShrink: 0 }}>{inc.status?.toUpperCase()}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: "3px 8px", borderRadius: 4, background: statusBadge.bg, color: statusBadge.color, border: `1px solid ${statusBadge.border}`, flexShrink: 0, whiteSpace: "nowrap" }}>{statusBadge.label}</span>
                   </div>
                   <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                     <span style={{ fontSize: 10, color: "#444" }}>🕐 {new Date(inc.created_at).toLocaleString("en-NG")}</span>
