@@ -51,6 +51,20 @@ const hasGpsFix = (lat, lng) => lat != null && lng != null && !(lat === 0 && lng
 const sanitizeCoords = (coords) =>
   hasGpsFix(coords?.lat, coords?.lng) ? { lat: coords.lat, lng: coords.lng } : { lat: null, lng: null };
 
+// Merges a realtime incident row into a list, deduping by id. Incidents can
+// arrive via two channels — the (RLS-restricted) raw `incidents` table with
+// real lat/lng for the reporter/admins, and the pre-masked
+// `incident_broadcasts` mirror for everyone else — in either order. A full
+// row always wins over a masked one for the same id.
+const mergeIncomingIncident = (prev, incoming, isFullData) => {
+  const idx = prev.findIndex((i) => i.id === incoming.id);
+  if (idx === -1) return [incoming, ...prev];
+  if (!isFullData) return prev;
+  const next = [...prev];
+  next[idx] = incoming;
+  return next;
+};
+
 const STATES = [
   { state: "Abia", zone: "South East", police: { command: "Abia State Police Command", number: "08033418481", commissioner: "CP Danladi Mamman" }, agencies: [{ name: "NSCDC Abia", number: "08036673645", icon: "⚔️" }, { name: "DSS Abia", number: "08033001234", icon: "🛡️" }, { name: "FRSC Abia", number: "08039483333", icon: "🚦" }, { name: "Fire Service Aba", number: "08034567890", icon: "🔥" }, { name: "FMC Umuahia", number: "08037654321", icon: "🏥" }, { name: "NDLEA Abia", number: "08033100001", icon: "💊" }, { name: "NEMA Abia", number: "08033200001", icon: "🆘" }, { name: "Nigerian Red Cross Abia", number: "08033300001", icon: "🏨" }, { name: "NIS Immigration Abia", number: "08033400001", icon: "🛂" }, { name: "Customs Abia", number: "08033500001", icon: "🏛️" }] },
   { state: "Adamawa", zone: "North East", police: { command: "Adamawa State Police Command", number: "08033456789", commissioner: "CP Sikiru Akande" }, agencies: [{ name: "NSCDC Adamawa", number: "08036674567", icon: "⚔️" }, { name: "DSS Adamawa", number: "08033002345", icon: "🛡️" }, { name: "FRSC Adamawa", number: "08039484444", icon: "🚦" }, { name: "SEMA Adamawa", number: "08035678901", icon: "🆘" }, { name: "Specialist Hospital Yola", number: "08037665432", icon: "🏥" }, { name: "NDLEA Adamawa", number: "08033100002", icon: "💊" }, { name: "NEMA Adamawa", number: "08033200002", icon: "🆘" }, { name: "Nigerian Red Cross Adamawa", number: "08033300002", icon: "🏨" }, { name: "NIS Immigration Adamawa", number: "08033400002", icon: "🛂" }, { name: "Customs Adamawa", number: "08033500002", icon: "🏛️" }] },
@@ -131,7 +145,6 @@ export default function MainApp({ session }) {
   const [userPlan, setUserPlan] = useState("freemium");
   const [planExpired, setPlanExpired] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
-  const isAdminUserRef = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem("safealert_onboarded");
   });
@@ -269,7 +282,7 @@ export default function MainApp({ session }) {
     checkSubscription();
     const checkAdmin = async () => {
       const adminCheck = await supabase.from("admin_roles").select("role").eq("user_id", session?.user?.id);
-      if (adminCheck?.data && adminCheck.data.length > 0) { setIsAdminUser(true); isAdminUserRef.current = true; }
+      if (adminCheck?.data && adminCheck.data.length > 0) setIsAdminUser(true);
     };
     checkAdmin();
   }, [session]);
@@ -861,13 +874,16 @@ export default function MainApp({ session }) {
     fetchNearbyAlerts(alertsFilter);
     const channel = supabase
       .channel("nearby-alerts")
+      // RLS now restricts this to the reporter's own incidents (or all of
+      // them for admins) — full, unmasked rows.
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
-        (payload) => setNearbyAlerts(prev => [
-          isAdminUserRef.current || payload.new.reporter_id === session?.user?.id
-            ? payload.new
-            : { ...payload.new, lat: null, lng: null },
-          ...prev.slice(0, 4)
-        ])
+        (payload) => setNearbyAlerts(prev => mergeIncomingIncident(prev, payload.new, true).slice(0, 5))
+      )
+      // Pre-masked mirror — delivered to every authenticated user so
+      // everyone still sees a "new alert" entry for incidents that aren't
+      // theirs.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "incident_broadcasts" },
+        (payload) => setNearbyAlerts(prev => mergeIncomingIncident(prev, { ...payload.new, lat: null, lng: null }, false).slice(0, 5))
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
@@ -1931,7 +1947,7 @@ export default function MainApp({ session }) {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: a.status === "active" ? "#FF2D2D" : "#00FF88", marginTop: 4, flexShrink: 0, boxShadow: `0 0 5px ${a.status === "active" ? "#FF2D2D" : "#00FF88"}` }} />
             <div>
               <div style={{ color: "#ccc", fontSize: 12, fontWeight: 600 }}>{a.type?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</div>
-              <div style={{ color: "#444", fontSize: 11 }}>{COORD_PAIR_RE.test(a.state) ? "📍 Location Private" : `📍 ${a.state}`} · {new Date(a.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
+              <div style={{ color: "#444", fontSize: 11 }}>{(COORD_PAIR_RE.test(a.state) || a.state === "Unknown location") ? "📍 Location Private" : `📍 ${a.state}`} · {new Date(a.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</div>
             </div>
           </div>
         )) : NEARBY_ALERTS.slice(0, 2).map(a => (
@@ -2534,13 +2550,6 @@ function LiveAlertsScreen({ session, isAdminUser }) {
   const [newAlert, setNewAlert] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
   const [locationNames, setLocationNames] = useState({});
-  const isAdminUserRef = useRef(isAdminUser);
-  const sessionUserIdRef = useRef(session?.user?.id);
-  useEffect(() => {
-    isAdminUserRef.current = isAdminUser;
-    sessionUserIdRef.current = session?.user?.id;
-  }, [isAdminUser, session?.user?.id]);
-
 
 
   const TYPE_LABELS = { kidnapping: "Kidnapping", kidnapping_attempt: "Kidnapping Attempt", robbery: "Armed Robbery", armed_robbery: "Armed Robbery", suspicious: "Suspicious Activity", suspicious_activity: "Suspicious Activity", suspicious_vehicle: "Suspicious Vehicle", attack: "Physical Attack", physical_attack: "Physical Attack", vehicle: "Suspect Vehicle", banditry: "Banditry", terrorism: "Terror Activity", other: "Other Threat" };
@@ -2599,12 +2608,21 @@ function LiveAlertsScreen({ session, isAdminUser }) {
     fetchIncidents();
     const channel = supabase
       .channel("incidents-feed")
+      // RLS now restricts this to the reporter's own incidents (or all of
+      // them for admins) — full, unmasked rows.
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "incidents" },
         (payload) => {
-          const incoming = isAdminUserRef.current || payload.new.reporter_id === sessionUserIdRef.current
-            ? payload.new
-            : { ...payload.new, lat: null, lng: null };
-          setIncidents(prev => [incoming, ...prev]); setNewAlert(true); setTimeout(() => setNewAlert(false), 5000);
+          setIncidents(prev => mergeIncomingIncident(prev, payload.new, true));
+          setNewAlert(true); setTimeout(() => setNewAlert(false), 5000);
+        }
+      )
+      // Pre-masked mirror — delivered to every authenticated user so
+      // everyone still sees a "new alert" entry for incidents that aren't
+      // theirs.
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "incident_broadcasts" },
+        (payload) => {
+          setIncidents(prev => mergeIncomingIncident(prev, { ...payload.new, lat: null, lng: null }, false));
+          setNewAlert(true); setTimeout(() => setNewAlert(false), 5000);
         }
       )
       .subscribe();
