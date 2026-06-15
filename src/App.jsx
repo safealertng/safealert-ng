@@ -3,6 +3,8 @@ import { supabase } from "./lib/supabase";
 import MainApp from "./components/MainApp";
 import AuthScreen from "./components/AuthScreen";
 import LandingPage from "./components/LandingPage";
+import PrivacyPolicy from "./components/PrivacyPolicy";
+import TermsOfService from "./components/TermsOfService";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -24,6 +26,11 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Public legal pages — accessible without login, checked before any auth gating
+  const path = window.location.pathname;
+  if (path === "/privacy") return <PrivacyPolicy onBack={() => { window.location.href = "/"; }} />;
+  if (path === "/terms") return <TermsOfService onBack={() => { window.location.href = "/"; }} />;
 
   if (loading) {
     return (

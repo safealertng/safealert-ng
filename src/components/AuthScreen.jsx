@@ -117,7 +117,12 @@ export default function AuthScreen({ onAuth, forceProfile }) {
               style={{ width:"100%", background:"linear-gradient(135deg,#FF2D2D,#990000)", border:"none", borderRadius:10, padding:15, color:"#fff", fontSize:15, fontWeight:900, letterSpacing:1.5, cursor:"pointer", fontFamily:"'Barlow Condensed', sans-serif", boxShadow:"0 4px 20px #FF2D2D33", opacity:loading?0.6:1, display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
               {loading ? <><div style={{ width:16, height:16, border:"2px solid #ffffff44", borderTop:"2px solid #fff", borderRadius:"50%", animation:"spin 0.7s linear infinite" }} />SENDING...</> : "📧 SEND MAGIC LINK"}
             </button>
-            <div style={{ textAlign:"center", marginTop:16, fontSize:11, color:"#2a2a2a", lineHeight:1.8 }}>By signing in you agree to SafeAlert NG Terms of Use and Privacy Policy</div>
+            <div style={{ textAlign:"center", marginTop:16, fontSize:11, color:"#555", lineHeight:1.8 }}>
+              By creating an account you agree to our{" "}
+              <a href="/terms" style={{ color:"#FF6B00", fontWeight:700, textDecoration:"underline" }}>Terms of Service</a>
+              {" "}and{" "}
+              <a href="/privacy" style={{ color:"#FF6B00", fontWeight:700, textDecoration:"underline" }}>Privacy Policy</a>
+            </div>
           </>
         )}
 

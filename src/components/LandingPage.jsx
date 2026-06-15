@@ -520,8 +520,14 @@ export default function LandingPage({ onGetStarted }) {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ padding: "32px 24px", borderTop: "1px solid #004400", textAlign: "center" }}>
-        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1, marginBottom: 8 }}>🛡️ SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
+      <footer style={{ padding: "32px 24px", borderTop: "1px solid #004400", textAlign: "center", background: "#060a03" }}>
+        <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 1, marginBottom: 12 }}>🛡️ SafeAlert<span style={{ color: "#00FF88" }}>NG</span></div>
+        <div style={{ display: "flex", gap: 18, flexWrap: "wrap", justifyContent: "center", marginBottom: 12 }}>
+          <a href="/privacy" style={{ color: "#FF6B00", fontSize: 12, fontWeight: 700, letterSpacing: 1, textDecoration: "none" }}>Privacy Policy</a>
+          <a href="/terms" style={{ color: "#FF6B00", fontSize: 12, fontWeight: 700, letterSpacing: 1, textDecoration: "none" }}>Terms of Service</a>
+          <a href="mailto:support@safealert.ng" style={{ color: "#FF6B00", fontSize: 12, fontWeight: 700, letterSpacing: 1, textDecoration: "none" }}>Contact Us</a>
+        </div>
+        <div style={{ fontSize: 11, color: "#555", letterSpacing: 1, marginBottom: 8 }}>© 2026 SafeAlertNG. All rights reserved.</div>
         <div style={{ fontSize: 11, color: "#1a2a1a", letterSpacing: 3, fontFamily: "monospace" }}>v1.0 · 🇳🇬 NIGERIA · 2026</div>
       </footer>
     </div>
