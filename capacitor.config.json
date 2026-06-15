@@ -1,0 +1,16 @@
+{
+  "appId": "ng.safealert.app",
+  "appName": "SafeAlertNG",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "Geolocation": {
+      "permissions": ["location"]
+    }
+  }
+}
